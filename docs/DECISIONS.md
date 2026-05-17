@@ -94,12 +94,29 @@ Key decisions:
 
 ## 7. What was the hardest part and how did you solve it?
 
-> _Fill in after building_
+**The SSE run-progress stream + circular import between run_service and orchestrator.**
 
-**Candidate:** The tool-use loop for agents — ensuring the Groq API call correctly
-cycles through tool calls until the model returns structured JSON output.
+Two intertwined problems surfaced simultaneously.
 
-**Solution:** ...
+**Problem 1 — Circular import:**
+`run_service` needed to call `orchestrator.run_for_product()` to start the pipeline,
+but the orchestrator originally imported `run_service` to push SSE events. Python
+resolves circular imports at module load time and raises `ImportError`.
+
+**Solution:** Made the import deferred — inside the `_execute_run()` function body
+(`from app.agents.orchestrator import run_for_product`). The orchestrator no longer
+imports `run_service` at all; instead `run_service._execute_run()` passes the progress
+queue directly so the orchestrator can push events without a back-reference.
+
+**Problem 2 — SSE race condition:**
+If the background task started before the stream subscriber connected, early
+`queue.put()` calls would land in a queue nobody was reading, and those events
+would be silently dropped.
+
+**Solution:** The queue is created and registered in `_run_queues[run_id]` *before*
+`asyncio.create_task()` is called. That way any subscriber that connects immediately
+after trigger will get all events from the start. A 25-second `asyncio.wait_for()`
+keepalive prevents the SSE connection from timing out between products.
 
 ---
 

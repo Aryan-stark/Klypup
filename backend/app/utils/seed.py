@@ -317,78 +317,106 @@ async def seed() -> None:
     )
 
     # ── Check idempotency ─────────────────────────────────────────────────────
-    existing_org = await Organization.find_one(Organization.slug == "acme-retail")
+    existing_org = await Organization.find_one(Organization.slug == "acme-corp")
     if existing_org:
-        print("Seed data already exists (org 'acme-retail' found). Skipping.")
+        print("Seed data already exists (org 'acme-corp' found). Skipping.")
         return
 
-    # ── Organisation ──────────────────────────────────────────────────────────
-    org = Organization(name="Acme Retail", slug="acme-retail")
-    await org.insert()
-    print(f"Created org: {org.name} ({org.id})")
-
-    # ── Users ─────────────────────────────────────────────────────────────────
-    admin = User(
-        org_id=org.id,
-        email="admin@acme.com",
-        password_hash=hash_password("password123"),
-        full_name="Alice Admin",
-        role=UserRole.ADMIN,
-    )
-    analyst = User(
-        org_id=org.id,
-        email="analyst@acme.com",
-        password_hash=hash_password("password123"),
-        full_name="Bob Analyst",
-        role=UserRole.PRICING_ANALYST,
-    )
-    await admin.insert()
-    await analyst.insert()
-    print(f"Created users: {admin.email}, {analyst.email}")
-
-    # ── Org config ────────────────────────────────────────────────────────────
-    config = OrgConfig(
-        org_id=org.id,
-        escalation_email="admin@acme.com",
-    )
-    await config.insert()
-    print("Created org config with default thresholds")
-
-    # ── Products ──────────────────────────────────────────────────────────────
-    products: list[Product] = []
-    for idx, tmpl in enumerate(CATALOGUE):
-        products.append(_make_product(tmpl, org.id, idx + 1))
-
-    await Product.insert_many(products)
-    print(f"Created {len(products)} products")
-
-    # ── Competitor prices ─────────────────────────────────────────────────────
-    comp_prices: list[CompetitorPrice] = []
-    for product in products:
-        comp_prices.extend(_make_competitor_prices(product, org.id))
-
-    # Insert in batches of 500 to avoid oversized MongoDB writes
     batch_size = 500
-    for i in range(0, len(comp_prices), batch_size):
-        await CompetitorPrice.insert_many(comp_prices[i : i + batch_size])
-    print(f"Created {len(comp_prices)} competitor price records")
+    total_products = 0
+    total_comp = 0
+    total_signals = 0
 
-    # ── Demand signals ────────────────────────────────────────────────────────
-    demand_signals: list[DemandSignal] = []
-    for product in products:
-        demand_signals.extend(_make_demand_signals(product, org.id))
+    # ── Seed both orgs ────────────────────────────────────────────────────────
+    orgs_to_seed = [
+        {
+            "name": "Acme Corp",
+            "slug": "acme-corp",
+            "admin_email": "admin@acme.com",
+            "admin_name": "Alice Admin",
+            "analyst_email": "analyst@acme.com",
+            "analyst_name": "Bob Analyst",
+            "escalation_email": "admin@acme.com",
+        },
+        {
+            "name": "Globex Inc",
+            "slug": "globex-inc",
+            "admin_email": "admin@globex.com",
+            "admin_name": "Charlie Admin",
+            "analyst_email": "analyst@globex.com",
+            "analyst_name": "Dana Analyst",
+            "escalation_email": "admin@globex.com",
+        },
+    ]
 
-    for i in range(0, len(demand_signals), batch_size):
-        await DemandSignal.insert_many(demand_signals[i : i + batch_size])
-    print(f"Created {len(demand_signals)} demand signal records")
+    for org_cfg in orgs_to_seed:
+        # ── Organisation ──────────────────────────────────────────────────────
+        org = Organization(name=org_cfg["name"], slug=org_cfg["slug"])
+        await org.insert()
+        print(f"Created org: {org.name} ({org.id})")
+
+        # ── Users ─────────────────────────────────────────────────────────────
+        admin = User(
+            org_id=org.id,
+            email=org_cfg["admin_email"],
+            password_hash=hash_password("password123"),
+            full_name=org_cfg["admin_name"],
+            role=UserRole.ADMIN,
+        )
+        analyst = User(
+            org_id=org.id,
+            email=org_cfg["analyst_email"],
+            password_hash=hash_password("password123"),
+            full_name=org_cfg["analyst_name"],
+            role=UserRole.PRICING_ANALYST,
+        )
+        await admin.insert()
+        await analyst.insert()
+        print(f"  Users: {admin.email}, {analyst.email}")
+
+        # ── Org config ────────────────────────────────────────────────────────
+        config = OrgConfig(
+            org_id=org.id,
+            escalation_email=org_cfg["escalation_email"],
+        )
+        await config.insert()
+
+        # ── Products ──────────────────────────────────────────────────────────
+        products: list[Product] = []
+        for idx, tmpl in enumerate(CATALOGUE):
+            products.append(_make_product(tmpl, org.id, idx + 1))
+
+        await Product.insert_many(products)
+        print(f"  Products: {len(products)}")
+        total_products += len(products)
+
+        # ── Competitor prices ──────────────────────────────────────────────────
+        comp_prices: list[CompetitorPrice] = []
+        for product in products:
+            comp_prices.extend(_make_competitor_prices(product, org.id))
+
+        for i in range(0, len(comp_prices), batch_size):
+            await CompetitorPrice.insert_many(comp_prices[i : i + batch_size])
+        total_comp += len(comp_prices)
+
+        # ── Demand signals ─────────────────────────────────────────────────────
+        demand_signals: list[DemandSignal] = []
+        for product in products:
+            demand_signals.extend(_make_demand_signals(product, org.id))
+
+        for i in range(0, len(demand_signals), batch_size):
+            await DemandSignal.insert_many(demand_signals[i : i + batch_size])
+        total_signals += len(demand_signals)
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print("\n✓ Seed complete!")
-    print("  Login: admin@acme.com / password123  (admin)")
-    print("  Login: analyst@acme.com / password123  (analyst)")
-    print(f"  Products: {len(products)}")
-    print(f"  Competitor prices: {len(comp_prices)}")
-    print(f"  Demand signals: {len(demand_signals)}")
+    print("  admin@acme.com / password123  (admin — Acme Corp)")
+    print("  analyst@acme.com / password123  (analyst — Acme Corp)")
+    print("  admin@globex.com / password123  (admin — Globex Inc)")
+    print("  analyst@globex.com / password123  (analyst — Globex Inc)")
+    print(f"  Products: {total_products} (across 2 orgs)")
+    print(f"  Competitor prices: {total_comp}")
+    print(f"  Demand signals: {total_signals}")
 
 
 if __name__ == "__main__":
