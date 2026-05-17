@@ -8,8 +8,9 @@ Functions:
   - get_demand_signals(product_id, days=30) → demand signal readings
   - get_seasonal_index(category)            → seasonal demand multiplier by month
 """
+from datetime import datetime, timedelta, timezone
+
 from beanie import PydanticObjectId
-from datetime import datetime, timezone, timedelta
 
 from app.models.demand_signal import DemandSignal
 
@@ -29,14 +30,57 @@ async def get_demand_signals(product_id: str, days: int = 30) -> dict:
     Returns demand signals for a product from the last N days.
     Called by DemandForecastingAgent.
     """
-    # TODO: implement
-    # cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    # signals = await DemandSignal.find(
-    #     DemandSignal.product_id == PydanticObjectId(product_id),
-    #     DemandSignal.recorded_at >= cutoff,
-    # ).to_list()
-    # return {"signals": [...], "source": "mock_analytics"}
-    pass
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    signals = await DemandSignal.find(
+        DemandSignal.product_id == PydanticObjectId(product_id),
+        DemandSignal.recorded_at >= cutoff,
+    ).sort("-recorded_at").to_list()
+
+    entries = [
+        {
+            "signal_type": s.signal_type.value,
+            "signal_value": s.signal_value,
+            "trend_direction": s.trend_direction.value,
+            "change_pct_7d": s.change_pct_7d,
+            "change_pct_30d": s.change_pct_30d,
+            "recorded_at": s.recorded_at.isoformat(),
+        }
+        for s in signals
+    ]
+
+    # Summarise by signal type for the agent
+    by_type: dict = {}
+    for e in entries:
+        t = e["signal_type"]
+        if t not in by_type:
+            by_type[t] = []
+        by_type[t].append(e["signal_value"])
+
+    summary = {
+        t: {
+            "avg": round(sum(vals) / len(vals), 1),
+            "latest": vals[0],
+            "count": len(vals),
+        }
+        for t, vals in by_type.items()
+    }
+
+    # Overall demand score: average across all signal types (0–100)
+    all_values = [e["signal_value"] for e in entries]
+    overall_score = round(sum(all_values) / len(all_values), 1) if all_values else 50.0
+
+    # Dominant trend direction
+    directions = [e["trend_direction"] for e in entries]
+    trend = max(set(directions), key=directions.count) if directions else "flat"
+
+    return {
+        "product_id": product_id,
+        "signal_count": len(entries),
+        "overall_demand_score": overall_score,
+        "dominant_trend": trend,
+        "by_type": summary,
+        "source": "mock_analytics",
+    }
 
 
 async def get_seasonal_index(category: str) -> dict:

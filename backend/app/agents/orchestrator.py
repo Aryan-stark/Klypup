@@ -24,7 +24,7 @@ from app.agents.inventory_cost_agent import InventoryCostAgent
 from app.agents.pricing_strategy_agent import PricingStrategyAgent
 from app.agents.execution_compliance_agent import ExecutionComplianceAgent
 from app.models.pricing_recommendation import PricingRecommendation, RecommendationStatus
-from app.services import audit_service, run_service
+from app.services import audit_service
 from app.tools import ecommerce_api
 from app.utils.logger import get_logger
 
@@ -65,6 +65,9 @@ async def run_for_product(
 
 async def _save_and_route(product_id, org_id, run_id, context, org_config):
     """Save recommendation and apply Python routing logic."""
+    from app.models.product import Product
+    from app.models.pricing_recommendation import AgentReasoning, ToolCallTrace
+
     strategy = context["pricing_strategy"]
     compliance = context["execution_compliance"]
 
@@ -75,20 +78,56 @@ async def _save_and_route(product_id, org_id, run_id, context, org_config):
         org_config=org_config,
     )
 
-    # Build agent_reasoning embedded list from context
-    # TODO: map context to AgentReasoning subdocs
+    # Fetch current product price for the recommendation record
+    product = await Product.get(product_id)
+    current_price = product.current_price if product else 0.0
+    final_price = compliance["final_recommended_price"]
+    price_change_pct = round(
+        (final_price - current_price) / current_price, 4
+    ) if current_price else 0.0
+
+    # Map context dicts → AgentReasoning embedded subdocs
+    agent_order = [
+        ("market_intelligence", "MarketIntelligenceAgent"),
+        ("demand_forecasting", "DemandForecastingAgent"),
+        ("inventory_cost", "InventoryCostAgent"),
+        ("pricing_strategy", "PricingStrategyAgent"),
+        ("execution_compliance", "ExecutionComplianceAgent"),
+    ]
+    agent_reasoning = []
+    for ctx_key, agent_name in agent_order:
+        agent_out = context.get(ctx_key, {})
+        tool_calls = [
+            ToolCallTrace(
+                tool_name=tc["tool_name"],
+                arguments=tc["arguments"],
+                result=tc["result"],
+                execution_ms=tc.get("execution_ms", 0),
+            )
+            for tc in agent_out.get("_tool_calls", [])
+        ]
+        agent_reasoning.append(AgentReasoning(
+            agent_name=agent_name,
+            input_context={k: v for k, v in agent_out.items()
+                           if not k.startswith("_")},
+            tool_calls=tool_calls,
+            output_signal={k: v for k, v in agent_out.items()
+                           if not k.startswith("_") and k != "narrative"},
+            narrative=agent_out.get("narrative", ""),
+            execution_ms=agent_out.get("_execution_ms", 0),
+        ))
 
     recommendation = PricingRecommendation(
         org_id=org_id,
         run_id=PydanticObjectId(run_id),
         product_id=PydanticObjectId(product_id),
-        current_price=0,        # TODO: fetch from product
-        recommended_price=compliance["final_recommended_price"],
-        price_change_pct=0,     # TODO: compute
+        current_price=current_price,
+        recommended_price=final_price,
+        price_change_pct=price_change_pct,
         confidence_score=strategy["confidence_score"],
         strategy_label=strategy["strategy_label"],
         rationale_summary=compliance["narrative"],
-        agent_reasoning=[],     # TODO: populate from context
+        agent_reasoning=agent_reasoning,
         status=status,
     )
     await recommendation.insert()
