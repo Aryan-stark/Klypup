@@ -19,6 +19,10 @@ class User(Document):
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: datetime | None = None
+    # Stores a bcrypt hash of the current valid refresh token.
+    # Cleared on logout. Replaced on every login/refresh.
+    # Lets us invalidate refresh tokens without a separate revocation store.
+    refresh_token_hash: str | None = None
 
     class Settings:
         name = "users"

@@ -32,7 +32,7 @@ async def logout(body: RefreshRequest):
 
 
 async def refresh(body: RefreshRequest):
-    result = await auth_service.refresh_token(body.refresh_token)
+    result = await auth_service.refresh_access_token(body.refresh_token)
     if not result:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Invalid or expired refresh token")
