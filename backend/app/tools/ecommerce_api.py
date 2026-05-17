@@ -19,6 +19,7 @@ import random
 from datetime import datetime, timezone
 
 from app.utils.logger import get_logger
+from app.models.product import Product
 
 logger = get_logger(__name__)
 
@@ -48,11 +49,12 @@ async def apply_price_change(product_id: str, new_price: float) -> dict:
             "rolled_back": True,
         }
 
-    # TODO: update Product.current_price in MongoDB
-    # product = await Product.get(product_id)
-    # product.current_price = new_price
-    # product.updated_at = datetime.now(timezone.utc)
-    # await product.save()
+    # Update current price in DB so the catalog reflects the applied price
+    product = await Product.get(product_id)
+    if product:
+        product.current_price = new_price
+        product.updated_at = datetime.now(timezone.utc)
+        await product.save()
 
     return {
         "success": True,

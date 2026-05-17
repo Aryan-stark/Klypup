@@ -4,12 +4,20 @@ import { useRecommendations } from '@/hooks/useRecommendations'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { runService } from '@/services/runService'
 import RecommendationCard from '@/components/recommendations/RecommendationCard'
+import RunProgressBar from '@/components/runs/RunProgressBar'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import EmptyState from '@/components/common/EmptyState'
+import type { ApiResponse } from '@/types/api'
 import type { Recommendation } from '@/types/recommendation'
+
+interface RunResult {
+  id: string
+  total_products: number
+}
 
 export default function Recommendations() {
   const [tab, setTab] = useState<'pending' | 'all'>('pending')
+  const [activeRun, setActiveRun] = useState<RunResult | null>(null)
   const qc = useQueryClient()
 
   const params = tab === 'pending' ? { status: 'pending', per_page: 50 } : { per_page: 50 }
@@ -17,8 +25,16 @@ export default function Recommendations() {
 
   const triggerRun = useMutation({
     mutationFn: () => runService.trigger(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['recommendations'] }),
+    onSuccess: (res: ApiResponse<RunResult>) => {
+      const run = res.data
+      setActiveRun({ id: run.id, total_products: run.total_products })
+    },
   })
+
+  const handleRunComplete = () => {
+    setActiveRun(null)
+    qc.invalidateQueries({ queryKey: ['recommendations'] })
+  }
 
   const items: Recommendation[] = (data?.data ?? []) as Recommendation[]
 
@@ -28,18 +44,21 @@ export default function Recommendations() {
         <h1 className="text-2xl font-bold">Recommendations</h1>
         <button
           onClick={() => triggerRun.mutate()}
-          disabled={triggerRun.isPending}
+          disabled={triggerRun.isPending || !!activeRun}
           className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
         >
           <Play className="h-4 w-4" />
-          {triggerRun.isPending ? 'Starting run…' : 'Run Pricing'}
+          {triggerRun.isPending ? 'Starting…' : 'Run Pricing'}
         </button>
       </div>
 
-      {triggerRun.isSuccess && (
-        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800">
-          Pricing run started — recommendations will appear shortly.
-        </div>
+      {/* Live SSE progress */}
+      {activeRun && (
+        <RunProgressBar
+          runId={activeRun.id}
+          totalProducts={activeRun.total_products}
+          onComplete={handleRunComplete}
+        />
       )}
 
       {/* Tabs */}

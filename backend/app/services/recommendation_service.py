@@ -104,13 +104,9 @@ async def _get_verified_rec(
 
 async def _apply_to_platform(rec: PricingRecommendation, price: float) -> None:
     """
-    Calls the e-commerce platform API and updates Product.current_price.
+    Calls the e-commerce platform API.
     Raises HTTP 502 if the platform call fails.
-
-    Why update the product here and not in ecommerce_api.py?
-      ecommerce_api is a mock tool — it should not import our models.
-      recommendation_service owns the workflow and is the right place
-      to coordinate the DB write that follows a successful platform call.
+    Product.current_price is updated inside ecommerce_api.apply_price_change().
     """
     result = await ecommerce_api.apply_price_change(str(rec.product_id), price)
 
@@ -119,13 +115,6 @@ async def _apply_to_platform(rec: PricingRecommendation, price: float) -> None:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Platform API failed: {result.get('error', 'unknown error')}",
         )
-
-    # Mirror the price change in our own product catalog
-    product = await Product.get(rec.product_id)
-    if product:
-        product.current_price = price
-        product.updated_at = datetime.now(timezone.utc)
-        await product.save()
 
 
 # ─── Public service functions ────────────────────────────────

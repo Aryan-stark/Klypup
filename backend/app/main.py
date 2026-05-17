@@ -2,9 +2,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import init_db
+from app.middleware.tenant import log_requests
 from app.routes import auth, products, recommendations, runs, audit, config, users, dashboard
 from app.utils.logger import get_logger
 
@@ -35,6 +37,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(BaseHTTPMiddleware, dispatch=log_requests)
 
 # ─── Routers ────────────────────────────────────────────────
 API_PREFIX = "/api/v1"

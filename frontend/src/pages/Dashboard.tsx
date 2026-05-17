@@ -1,13 +1,19 @@
 import { Clock, CheckCircle2, TrendingUp, BarChart3 } from 'lucide-react'
 import { useDashboardKpis, useDashboardActivity } from '@/hooks/useDashboard'
+import { useRecommendations } from '@/hooks/useRecommendations'
 import KpiCard from '@/components/dashboard/KpiCard'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
+import ConfidenceChart from '@/components/dashboard/ConfidenceChart'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { formatPercent } from '@/lib/utils'
+import type { Recommendation } from '@/types/recommendation'
 
 export default function Dashboard() {
   const kpis = useDashboardKpis()
   const activity = useDashboardActivity()
+  const recs = useRecommendations({ per_page: 100 })
+
+  const recItems: Recommendation[] = (recs.data?.data ?? []) as Recommendation[]
 
   return (
     <div className="space-y-6">
@@ -44,13 +50,26 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Recent Activity</h2>
-        {activity.isLoading ? (
-          <LoadingSpinner />
-        ) : activity.data?.data ? (
-          <ActivityFeed items={activity.data.data as never} />
-        ) : null}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Confidence distribution */}
+        <div className="rounded-lg border bg-card p-5">
+          <p className="text-sm font-semibold mb-4">Confidence Distribution</p>
+          {recs.isLoading ? (
+            <LoadingSpinner />
+          ) : (
+            <ConfidenceChart recommendations={recItems} />
+          )}
+        </div>
+
+        {/* Recent activity */}
+        <div className="rounded-lg border bg-card p-5">
+          <p className="text-sm font-semibold mb-4">Recent Activity</p>
+          {activity.isLoading ? (
+            <LoadingSpinner />
+          ) : activity.data?.data ? (
+            <ActivityFeed items={activity.data.data as never} />
+          ) : null}
+        </div>
       </div>
     </div>
   )

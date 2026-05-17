@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from app.controllers import run_controller
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_sse_user
 from app.schemas.run import RunCreate
 
 router = APIRouter()
@@ -28,8 +28,8 @@ async def get_run(run_id: str, current_user=Depends(get_current_user)):
 
 
 @router.get("/{run_id}/stream")
-async def stream_run(run_id: str, current_user=Depends(get_current_user)):
-    """Server-Sent Events — frontend receives live progress updates."""
+async def stream_run(run_id: str, current_user=Depends(get_sse_user)):
+    """Server-Sent Events — token passed as ?token= since EventSource cannot set headers."""
     return StreamingResponse(
         run_controller.stream_run_progress(current_user, run_id),
         media_type="text/event-stream",
