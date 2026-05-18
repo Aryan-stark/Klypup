@@ -74,9 +74,14 @@ async def _save_and_route(product_id, org_id, run_id, context, org_config):
     compliance = context["execution_compliance"]
 
     # Status routing — deterministic Python, not AI
+    # Coerce to float — small models sometimes omit the field or return it as a string
+    try:
+        confidence = float(strategy.get("confidence_score") or 0.5)
+    except (TypeError, ValueError):
+        confidence = 0.5
     status = _route_status(
-        confidence=strategy["confidence_score"],
-        compliance_override=compliance.get("compliance_override", False),
+        confidence=confidence,
+        compliance_override=bool(compliance.get("compliance_override", False)),
         org_config=org_config,
     )
 
@@ -133,9 +138,9 @@ async def _save_and_route(product_id, org_id, run_id, context, org_config):
         current_price=current_price,
         recommended_price=final_price,
         price_change_pct=price_change_pct,
-        confidence_score=strategy.get("confidence_score", 0.5),
-        strategy_label=strategy.get("strategy_label", "unknown"),
-        rationale_summary=compliance.get("narrative", strategy.get("narrative", "")),
+        confidence_score=confidence,   # already coerced to float above
+        strategy_label=strategy.get("strategy_label") or "unknown",
+        rationale_summary=compliance.get("narrative") or strategy.get("narrative") or "",
         agent_reasoning=agent_reasoning,
         status=status,
     )

@@ -61,9 +61,17 @@ Confidence score guidance (0.0 to 1.0):
   - High price elasticity → subtract 0.05-0.10
   - Critical inventory pressure → subtract 0.05
 
-Output a JSON object with:
-  recommended_price, strategy_label, strategy_rationale, expected_margin_pct,
-  confidence_score, risk_factors (array of strings), narrative"""
+After calling any tools, output ONLY a valid JSON object. Key names must be EXACTLY:
+  "recommended_price" (float),
+  "strategy_label" (string — one of the 5 named strategies above),
+  "strategy_rationale" (string),
+  "expected_margin_pct" (float),
+  "confidence_score" (float between 0.0 and 1.0 — REQUIRED, never omit),
+  "risk_factors" (array of strings — empty array [] if none),
+  "narrative" (string)
+
+Example output shape:
+{"recommended_price": 89.99, "strategy_label": "competitive_parity", "strategy_rationale": "...", "expected_margin_pct": 0.32, "confidence_score": 0.78, "risk_factors": [], "narrative": "..."}"""
 
     @property
     def tools(self) -> list[dict]:

@@ -121,6 +121,8 @@ class BaseAgent(ABC):
             {"role": "user", "content": self._build_user_message(product_id, context)},
         ]
         tool_call_traces = []
+        nudge_count = 0
+        _MAX_NUDGES = 2   # max retries when model returns non-JSON
 
         while True:
             response = await self._api_call(messages)
@@ -150,24 +152,29 @@ class BaseAgent(ABC):
                 content = choice.message.content
                 output = self._parse_json_output(content)
                 if output is None:
-                    # Model returned empty/unparseable content — ask it to retry
-                    logger.warning(
-                        f"[{self.name}] empty/invalid JSON response, "
-                        f"asking model to produce JSON output"
-                    )
-                    messages.append({
-                        "role": "assistant",
-                        "content": content or "",
-                    })
-                    messages.append({
-                        "role": "user",
-                        "content": (
-                            "Your previous response was empty or not valid JSON. "
-                            "Please output ONLY a valid JSON object with the required fields. "
-                            "No markdown, no explanation — just the JSON object."
-                        ),
-                    })
-                    continue  # retry the API call with the nudge message
+                    if nudge_count >= _MAX_NUDGES:
+                        # Give up — return a minimal safe dict so the pipeline continues
+                        logger.warning(
+                            f"[{self.name}] could not get JSON after {_MAX_NUDGES} nudges, "
+                            f"returning empty output"
+                        )
+                        output = {}
+                    else:
+                        nudge_count += 1
+                        logger.warning(
+                            f"[{self.name}] empty/invalid JSON response, "
+                            f"asking model to produce JSON output (nudge {nudge_count}/{_MAX_NUDGES})"
+                        )
+                        messages.append({"role": "assistant", "content": content or ""})
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                "Your previous response was empty or not valid JSON. "
+                                "Output ONLY a valid JSON object with the required fields. "
+                                "No markdown, no explanation — just the raw JSON object."
+                            ),
+                        })
+                        continue  # retry the API call with the nudge message
                 output["_tool_calls"] = tool_call_traces
                 output["_execution_ms"] = int((time.monotonic() - start) * 1000)
                 logger.info(f"[{self.name}] completed in {output['_execution_ms']}ms")
