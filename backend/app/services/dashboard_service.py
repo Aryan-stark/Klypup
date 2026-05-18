@@ -50,13 +50,37 @@ async def get_kpis(org_id: PydanticObjectId) -> dict:
         ).count(),
     )
 
-    # Average confidence — aggregation pipeline (single round-trip)
+    # Average confidence + distribution buckets — single aggregation round-trip
     agg = await PricingRecommendation.find(
         PricingRecommendation.org_id == org_id,
     ).aggregate([
-        {"$group": {"_id": None, "avg": {"$avg": "$confidence_score"}}}
+        {"$group": {
+            "_id": {"$switch": {
+                "branches": [
+                    {"case": {"$lt": ["$confidence_score", 0.50]}, "then": 0},
+                    {"case": {"$lt": ["$confidence_score", 0.65]}, "then": 1},
+                    {"case": {"$lt": ["$confidence_score", 0.80]}, "then": 2},
+                    {"case": {"$lt": ["$confidence_score", 0.90]}, "then": 3},
+                ],
+                "default": 4,
+            }},
+            "count": {"$sum": 1},
+            "sum_confidence": {"$sum": "$confidence_score"},
+        }},
     ]).to_list()
-    avg_confidence = round(agg[0]["avg"], 3) if agg else 0.0
+
+    bucket_map = {r["_id"]: r for r in agg}
+    total_for_avg = sum(r["count"] for r in agg)
+    total_confidence = sum(r["sum_confidence"] for r in agg)
+    avg_confidence = round(total_confidence / total_for_avg, 3) if total_for_avg else 0.0
+
+    confidence_distribution = [
+        {"label": "<50%",   "count": bucket_map.get(0, {}).get("count", 0), "color": "#ef4444"},
+        {"label": "50–65%", "count": bucket_map.get(1, {}).get("count", 0), "color": "#f97316"},
+        {"label": "65–80%", "count": bucket_map.get(2, {}).get("count", 0), "color": "#eab308"},
+        {"label": "80–90%", "count": bucket_map.get(3, {}).get("count", 0), "color": "#84cc16"},
+        {"label": "90%+",   "count": bucket_map.get(4, {}).get("count", 0), "color": "#22c55e"},
+    ]
 
     return {
         "pending_approvals": pending_count,
@@ -64,6 +88,7 @@ async def get_kpis(org_id: PydanticObjectId) -> dict:
         "avg_confidence_score": avg_confidence,
         "total_recommendations": total_recs,
         "active_products": active_products,
+        "confidence_distribution": confidence_distribution,
     }
 
 
