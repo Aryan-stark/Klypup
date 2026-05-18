@@ -21,12 +21,22 @@ async def export_csv(current_user):
     """Async generator — streams CSV rows to client without loading all into memory."""
     logs = await audit_service.get_all_for_export(current_user.org_id)
 
+    # Field names must exactly match the keys returned by get_all_for_export.
+    # extrasaction='ignore' is a safety net — raises nothing if the dict grows extra keys.
+    FIELDS = [
+        "occurred_at", "action", "product_name", "actor_email",
+        "recommendation_id", "old_value", "new_value", "metadata",
+    ]
+
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=[
-        "occurred_at", "action", "product_name", "actor_name",
-        "old_value", "new_value",
-    ])
+    writer = csv.DictWriter(output, fieldnames=FIELDS, extrasaction="ignore")
+
+    # Yield the header row first — even for empty exports this produces a valid CSV.
     writer.writeheader()
+    yield output.getvalue()
+    output.seek(0)
+    output.truncate(0)
+
     for log in logs:
         writer.writerow(log)
         yield output.getvalue()

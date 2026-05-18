@@ -130,24 +130,38 @@ async def list_audit(
 async def get_all_for_export(org_id: PydanticObjectId) -> list:
     """
     Returns every audit entry for this org as flat dicts — used by /audit/export.
-    Caller is responsible for streaming this to CSV so it doesn't blow up memory
-    for large orgs (in production this would be paginated or streamed).
+    Enriches each row with product name and actor email (batch-fetched) so the
+    CSV is human-readable without needing to cross-reference IDs.
     """
     entries = await AuditLog.find(
         AuditLog.org_id == org_id,
     ).sort("-occurred_at").to_list()
 
+    # Batch-fetch names so the CSV is readable without cross-referencing IDs
+    product_ids = list({e.product_id for e in entries if e.product_id})
+    actor_ids   = list({e.actor_id   for e in entries if e.actor_id})
+
+    product_map: dict = {}
+    actor_map: dict   = {}
+
+    if product_ids:
+        products = await Product.find(In(Product.id, product_ids)).to_list()
+        product_map = {p.id: p.name for p in products}
+
+    if actor_ids:
+        actors = await User.find(In(User.id, actor_ids)).to_list()
+        actor_map = {u.id: u.email for u in actors}
+
     return [
         {
-            "id": str(e.id),
-            "action": e.action,
-            "product_id": str(e.product_id) if e.product_id else "",
-            "recommendation_id": str(e.recommendation_id) if e.recommendation_id else "",
-            "actor_id": str(e.actor_id) if e.actor_id else "",
-            "old_value": str(e.old_value or ""),
-            "new_value": str(e.new_value or ""),
-            "metadata": str(e.metadata or ""),
-            "occurred_at": e.occurred_at.isoformat(),
+            "occurred_at":        e.occurred_at.isoformat(),
+            "action":             e.action,
+            "product_name":       product_map.get(e.product_id, "") if e.product_id else "",
+            "actor_email":        actor_map.get(e.actor_id, "")    if e.actor_id   else "",
+            "recommendation_id":  str(e.recommendation_id) if e.recommendation_id else "",
+            "old_value":          str(e.old_value  or ""),
+            "new_value":          str(e.new_value  or ""),
+            "metadata":           str(e.metadata   or ""),
         }
         for e in entries
     ]

@@ -23,6 +23,12 @@ class OrgConfig(Document):
     escalation_email: str | None = None
     require_dual_approval: bool = False
 
+    # AI provider config (set via admin Settings → AI Configuration)
+    # Falls back to env-var keys when all three are None.
+    ai_provider: str | None = None   # "cerebras" | "gemini" | "groq"
+    ai_model: str | None = None      # e.g. "llama3.1-8b", "gemini-2.5-flash"
+    ai_api_key: str | None = None    # stored in DB; never returned in full to the frontend
+
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_by: PydanticObjectId | None = None
 

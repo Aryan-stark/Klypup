@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from app.controllers import audit_controller
-from app.dependencies import get_current_user, require_admin
+from app.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -26,8 +26,8 @@ async def list_audit(
 
 
 @router.get("/export")
-async def export_audit(current_user=Depends(require_admin)):
-    """Returns a CSV file of the full audit log."""
+async def export_audit(current_user=Depends(get_current_user)):
+    """Returns a CSV file of the full audit log for the current org."""
     return StreamingResponse(
         audit_controller.export_csv(current_user),
         media_type="text/csv",
