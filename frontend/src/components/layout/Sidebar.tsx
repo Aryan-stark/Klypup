@@ -4,7 +4,7 @@
  */
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, Package, Lightbulb, ClipboardList, Settings,
+  LayoutDashboard, Package, Lightbulb, ClipboardList, Settings, Users, PlayCircle,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/dashboard',       label: 'Dashboard',        icon: LayoutDashboard },
   { to: '/products',        label: 'Products',         icon: Package },
   { to: '/recommendations', label: 'Recommendations',  icon: Lightbulb },
+  { to: '/runs',            label: 'Runs',             icon: PlayCircle },
   { to: '/audit',           label: 'Audit Trail',      icon: ClipboardList },
 ]
 
@@ -44,18 +45,32 @@ export default function Sidebar() {
         ))}
 
         {user?.role === 'admin' && (
-          <NavLink
-            to="/settings"
-            className={({ isActive }) =>
-              cn('flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground')
-            }
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </NavLink>
+          <>
+            <NavLink
+              to="/users"
+              className={({ isActive }: { isActive: boolean }) =>
+                cn('flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground')
+              }
+            >
+              <Users className="h-4 w-4" />
+              Team
+            </NavLink>
+            <NavLink
+              to="/settings"
+              className={({ isActive }: { isActive: boolean }) =>
+                cn('flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground')
+              }
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </NavLink>
+          </>
         )}
       </nav>
     </aside>

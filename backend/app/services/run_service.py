@@ -132,7 +132,7 @@ async def _execute_run(
     recs_generated = 0
 
     try:
-        for pid in product_ids:
+        for i, pid in enumerate(product_ids):
             rec = await run_for_product(str(pid), org_id, run_id, org_config)
 
             run.products_processed += 1
@@ -147,6 +147,12 @@ async def _execute_run(
                 "product_id": str(pid),
                 "recommendation_generated": rec is not None,
             })
+
+            # Groq free tier: 30 req/min for llama-3.3-70b.
+            # Each product = 5 agent calls (agents 1,2,4 use 70b; 3,5 use 8b-instant).
+            # A 2-second pause keeps throughput under the limit with headroom.
+            if i < len(product_ids) - 1:
+                await asyncio.sleep(2)
 
         run.status = RunStatus.COMPLETED
         run.completed_at = datetime.now(timezone.utc)

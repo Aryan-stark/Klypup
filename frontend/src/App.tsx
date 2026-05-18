@@ -29,6 +29,8 @@ import Recommendations from '@/pages/Recommendations'
 import RecommendationDetail from '@/pages/RecommendationDetail'
 import Audit from '@/pages/Audit'
 import Settings from '@/pages/Settings'
+import Users from '@/pages/Users'
+import Runs from '@/pages/Runs'
 import NotFound from '@/pages/NotFound'
 
 export default function App() {
@@ -47,10 +49,12 @@ export default function App() {
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/recommendations/:id" element={<RecommendationDetail />} />
           <Route path="/audit" element={<Audit />} />
+          <Route path="/runs" element={<Runs />} />
 
           {/* Admin only */}
           <Route element={<RoleGuard allowedRoles={['admin']} />}>
             <Route path="/settings" element={<Settings />} />
+            <Route path="/users" element={<Users />} />
           </Route>
         </Route>
       </Route>

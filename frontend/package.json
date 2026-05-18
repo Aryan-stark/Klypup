@@ -30,7 +30,6 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.1",
-    "@radix-ui/react-badge": "^0.1.0",
     "date-fns": "^3.6.0"
   },
   "devDependencies": {

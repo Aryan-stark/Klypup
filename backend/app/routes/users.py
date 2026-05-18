@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from app.controllers import user_controller
 from app.dependencies import require_admin
+from app.schemas.user import InviteUserRequest, UpdateUserRequest
 
 router = APIRouter()
 
@@ -15,10 +16,11 @@ async def list_users(current_user=Depends(require_admin)):
 
 
 @router.post("/invite")
-async def invite_user(body: dict, current_user=Depends(require_admin)):
+async def invite_user(body: InviteUserRequest, current_user=Depends(require_admin)):
     return await user_controller.invite_user(current_user, body)
 
 
 @router.patch("/{user_id}")
-async def update_user(user_id: str, body: dict, current_user=Depends(require_admin)):
+async def update_user(user_id: str, body: UpdateUserRequest,
+                      current_user=Depends(require_admin)):
     return await user_controller.update_user(current_user, user_id, body)
