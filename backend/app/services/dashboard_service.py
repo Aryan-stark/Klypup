@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from beanie import PydanticObjectId
+from beanie.operators import In
 
 from app.models.audit_log import AuditLog
 from app.models.pricing_recommendation import PricingRecommendation, RecommendationStatus
@@ -24,7 +25,7 @@ async def get_kpis(org_id: PydanticObjectId) -> dict:
         # Recommendations waiting for analyst action
         PricingRecommendation.find(
             PricingRecommendation.org_id == org_id,
-            PricingRecommendation.status.in_([
+            In(PricingRecommendation.status, [
                 RecommendationStatus.PENDING,
                 RecommendationStatus.ESCALATED,
             ]),

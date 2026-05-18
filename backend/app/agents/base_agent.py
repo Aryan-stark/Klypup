@@ -21,24 +21,39 @@ How the Groq tool-use loop works:
   3. If response.finish_reason == "stop":
        - Model is done — parse its final message as JSON output
 """
+import asyncio
 import json
+import re
 import time
 from abc import ABC, abstractmethod
-
-from groq import AsyncGroq
 
 from app.config import settings
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# One shared Groq client — created once, reused by all agents
-_groq_client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+# Auto-select provider: Gemini if key is set, otherwise Groq
+# Auto-select provider: Gemini if key is set, otherwise Groq
+if settings.GEMINI_API_KEY:
+    from openai import AsyncOpenAI
+    _client = AsyncOpenAI(
+        api_key=settings.GEMINI_API_KEY,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+    )
+    # Check if a MODEL_NAME is set in .env, otherwise default safely
+    _DEFAULT_MODEL = getattr(settings, "MODEL_NAME", "gemini-2.0-flash")
+    logger.info(f"AI provider: Google Gemini ({_DEFAULT_MODEL})")
+else:
+    from groq import AsyncGroq
+    _client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+    _DEFAULT_MODEL = getattr(settings, "MODEL_NAME", "llama-3.3-70b-versatile")
+    logger.info(f"AI provider: Groq ({_DEFAULT_MODEL})")
+_MAX_RETRIES = 3
 
 
 class BaseAgent(ABC):
     name: str = "base"
-    model: str = "llama-3.3-70b-versatile"
+    model: str = _DEFAULT_MODEL
 
     @property
     @abstractmethod
@@ -60,6 +75,33 @@ class BaseAgent(ABC):
         """Each agent maps tool names to the correct tools/ function."""
         ...
 
+    async def _api_call(self, messages: list, attempt: int = 0):
+        """
+        Single API call with retry-on-429 logic.
+        Reads the retryDelay from the error body and waits that long.
+        """
+        try:
+            return await _client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                tools=self.tools,
+                tool_choice="auto",
+            )
+        except Exception as exc:
+            err = str(exc)
+            is_rate_limit = "429" in err or "RESOURCE_EXHAUSTED" in err
+            if is_rate_limit and attempt < _MAX_RETRIES:
+                # Extract suggested retry delay (e.g. 'retryDelay': '48s')
+                m = re.search(r"retryDelay.*?(\d+)s", err)
+                wait = int(m.group(1)) + 5 if m else 65
+                logger.warning(
+                    f"[{self.name}] Rate limited — waiting {wait}s "
+                    f"(attempt {attempt + 1}/{_MAX_RETRIES})"
+                )
+                await asyncio.sleep(wait)
+                return await self._api_call(messages, attempt + 1)
+            raise
+
     async def run(self, product_id: str, context: dict) -> dict:
         """
         Main agent entry point. Runs the full tool-use loop.
@@ -73,13 +115,7 @@ class BaseAgent(ABC):
         tool_call_traces = []
 
         while True:
-            response = await _groq_client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                tools=self.tools,
-                tool_choice="auto",
-                response_format={"type": "json_object"},
-            )
+            response = await self._api_call(messages)
             choice = response.choices[0]
 
             if choice.finish_reason == "tool_calls":
@@ -103,11 +139,71 @@ class BaseAgent(ABC):
                     })
             else:
                 # finish_reason == "stop" — model produced final output
-                output = json.loads(choice.message.content)
+                content = choice.message.content
+                output = self._parse_json_output(content)
+                if output is None:
+                    # Model returned empty/unparseable content — ask it to retry
+                    logger.warning(
+                        f"[{self.name}] empty/invalid JSON response, "
+                        f"asking model to produce JSON output"
+                    )
+                    messages.append({
+                        "role": "assistant",
+                        "content": content or "",
+                    })
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Your previous response was empty or not valid JSON. "
+                            "Please output ONLY a valid JSON object with the required fields. "
+                            "No markdown, no explanation — just the JSON object."
+                        ),
+                    })
+                    continue  # retry the API call with the nudge message
                 output["_tool_calls"] = tool_call_traces
                 output["_execution_ms"] = int((time.monotonic() - start) * 1000)
                 logger.info(f"[{self.name}] completed in {output['_execution_ms']}ms")
                 return output
+
+    def _parse_json_output(self, content: str | None) -> dict | None:
+        """
+        Robustly extract a JSON object from the model's response.
+        Returns None if no valid JSON can be found (caller will nudge and retry).
+        Handles: raw JSON, ```json fences, prose with embedded JSON.
+        """
+        if not content or not content.strip():
+            return None
+
+        text = content.strip()
+
+        # 1. Strip ``` fences
+        if text.startswith("```"):
+            parts = text.split("```")
+            if len(parts) >= 2:
+                inner = parts[1]
+                if inner.startswith("json"):
+                    inner = inner[4:]
+                text = inner.strip()
+
+        if not text:
+            return None
+
+        # 2. Try direct parse
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # 3. Regex fallback — find the first {...} block in case of surrounding prose
+        m = re.search(r"\{.*\}", text, re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group())
+            except json.JSONDecodeError:
+                pass
+
+        logger.warning(f"[{self.name}] could not parse JSON from: {text[:200]!r}")
+        return None
 
     def _build_user_message(self, product_id: str, context: dict) -> str:
         """Formats the user message with product_id and upstream agent context."""

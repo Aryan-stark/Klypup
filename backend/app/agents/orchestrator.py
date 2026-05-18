@@ -49,7 +49,9 @@ async def run_for_product(
     Runs the full 5-agent pipeline for one product.
     Returns the saved PricingRecommendation, or None if an agent fails.
     """
-    context = {}
+    # Seed org_id into context so agents can pass it to org-scoped tools
+    # (e.g. get_org_margin_floor, get_org_config) — without this, models invent fake IDs
+    context = {"org_id": str(org_id)}
 
     for AgentClass in AGENT_PIPELINE:
         agent = AgentClass()

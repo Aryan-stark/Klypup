@@ -1,4 +1,8 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Resolve .env from project root regardless of working directory
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -8,14 +12,16 @@ class Settings(BaseSettings):
     Import `settings` anywhere in the app — never use os.environ directly.
     """
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), extra="ignore")
 
     # ── MongoDB ────────────────────────────────────────────
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "klypup_pricing"
 
-    # ── Groq AI ────────────────────────────────────────────
-    GROQ_API_KEY: str  # required — no default, app won't start without it
+    # ── AI provider ───────────────────────────────────────
+    GROQ_API_KEY: str = ""       # Groq — optional if using Gemini
+    GEMINI_API_KEY: str = ""     # Google Gemini — optional if using Groq
+    MODEL_NAME: str = "gemini-1.5-pro"  # Added this line with a safe fallback default
 
     # ── JWT ────────────────────────────────────────────────
     JWT_SECRET: str    # required — long random string

@@ -10,7 +10,7 @@ async def list_recommendations(current_user, status, run_id, product_id,
                                 confidence_min, page, per_page):
     return await recommendation_service.list_recommendations(
         org_id=current_user.org_id,
-        status=status, run_id=run_id, product_id=product_id,
+        status_filter=status, run_id=run_id, product_id=product_id,
         confidence_min=confidence_min, page=page, per_page=per_page,
     )
 

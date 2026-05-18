@@ -57,6 +57,7 @@ Always use JSON output format."""
                             "days": {"type": "integer", "default": 7},
                         },
                         "required": ["product_id"],
+                        "additionalProperties": False,
                     },
                 },
             },
@@ -71,6 +72,7 @@ Always use JSON output format."""
                             "product_id": {"type": "string"},
                         },
                         "required": ["product_id"],
+                        "additionalProperties": False,
                     },
                 },
             },
@@ -78,7 +80,12 @@ Always use JSON output format."""
 
     async def execute_tool(self, tool_name: str, arguments: dict) -> dict:
         if tool_name == "get_competitor_prices":
-            return await competitor_data.get_competitor_prices(**arguments)
+            return await competitor_data.get_competitor_prices(
+                product_id=arguments["product_id"],
+                days=arguments.get("days", 7),
+            )
         if tool_name == "get_product_details":
-            return await competitor_data.get_product_details(**arguments)
+            return await competitor_data.get_product_details(
+                product_id=arguments["product_id"],
+            )
         return {"error": f"Unknown tool: {tool_name}"}

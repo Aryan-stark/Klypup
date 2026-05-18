@@ -77,6 +77,7 @@ Output a JSON object with:
                         "type": "object",
                         "properties": {"org_id": {"type": "string"}},
                         "required": ["org_id"],
+                        "additionalProperties": False,
                     },
                 },
             },
@@ -84,5 +85,5 @@ Output a JSON object with:
 
     async def execute_tool(self, tool_name: str, arguments: dict) -> dict:
         if tool_name == "get_org_config":
-            return await inventory_data.get_org_config(**arguments)
+            return await inventory_data.get_org_config(org_id=arguments["org_id"])
         return {"error": f"Unknown tool: {tool_name}"}
