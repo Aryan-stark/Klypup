@@ -49,6 +49,20 @@ async def run_for_product(
     Runs the full 5-agent pipeline for one product.
     Returns the saved PricingRecommendation, or None if an agent fails.
     """
+    # Resolve AI client: prefer org DB config, fall back to env-var client
+    from app.services.config_service import get_ai_config as _get_ai_cfg
+    from app.utils.ai_client import make_ai_client, get_default_model
+
+    ai_cfg = await _get_ai_cfg(org_id)
+    if ai_cfg["ai_provider"] and ai_cfg["ai_api_key"]:
+        ai_client = make_ai_client(ai_cfg["ai_provider"], ai_cfg["ai_api_key"])
+        ai_model = ai_cfg["ai_model"] or get_default_model(ai_cfg["ai_provider"])
+        logger.info(f"[run] AI config: DB ({ai_cfg['ai_provider']} / {ai_model})")
+    else:
+        ai_client = None   # base_agent falls back to env-var fallback_client
+        ai_model = None
+        logger.info("[run] AI config: env-var fallback")
+
     # Seed org_id into context so agents can pass it to org-scoped tools
     # (e.g. get_org_margin_floor, get_org_config) — without this, models invent fake IDs
     context = {"org_id": str(org_id)}
@@ -56,7 +70,12 @@ async def run_for_product(
     for AgentClass in AGENT_PIPELINE:
         agent = AgentClass()
         try:
-            output = await agent.run(product_id=product_id, context=context)
+            output = await agent.run(
+                product_id=product_id,
+                context=context,
+                ai_client=ai_client,
+                ai_model=ai_model,
+            )
             context[agent.name] = output
         except Exception as exc:
             logger.error(f"[{agent.name}] failed for product {product_id}: {exc}")

@@ -27,41 +27,17 @@ import re
 import time
 from abc import ABC, abstractmethod
 
-from app.config import settings
 from app.utils.logger import get_logger
+from app.utils.ai_client import fallback_client, DEFAULT_MODEL
 
 logger = get_logger(__name__)
-
-# Provider priority: Cerebras → Gemini → Groq
-# Set only ONE key in .env — whichever provider you want to use.
-if settings.CEREBRAS_API_KEY:
-    from openai import AsyncOpenAI
-    _client = AsyncOpenAI(
-        api_key=settings.CEREBRAS_API_KEY,
-        base_url="https://api.cerebras.ai/v1/",
-    )
-    _DEFAULT_MODEL = settings.MODEL_NAME or "llama3.1-8b"
-    logger.info(f"AI provider: Cerebras ({_DEFAULT_MODEL})")
-elif settings.GEMINI_API_KEY:
-    from openai import AsyncOpenAI
-    _client = AsyncOpenAI(
-        api_key=settings.GEMINI_API_KEY,
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-    )
-    _DEFAULT_MODEL = settings.MODEL_NAME or "gemini-2.5-flash"
-    logger.info(f"AI provider: Google Gemini ({_DEFAULT_MODEL})")
-else:
-    from groq import AsyncGroq
-    _client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-    _DEFAULT_MODEL = settings.MODEL_NAME or "llama-3.3-70b-versatile"
-    logger.info(f"AI provider: Groq ({_DEFAULT_MODEL})")
 
 _MAX_RETRIES = 3
 
 
 class BaseAgent(ABC):
     name: str = "base"
-    model: str = _DEFAULT_MODEL
+    model: str = DEFAULT_MODEL
 
     @property
     @abstractmethod
@@ -73,7 +49,7 @@ class BaseAgent(ABC):
     @abstractmethod
     def tools(self) -> list[dict]:
         """
-        List of Groq-format tool definitions the agent can call.
+        List of tool definitions the agent can call.
         Format: [{"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}]
         """
         ...
@@ -83,14 +59,14 @@ class BaseAgent(ABC):
         """Each agent maps tool names to the correct tools/ function."""
         ...
 
-    async def _api_call(self, messages: list, attempt: int = 0):
+    async def _api_call(self, messages: list, client, model: str, attempt: int = 0):
         """
         Single API call with retry-on-429 logic.
-        Reads the retryDelay from the error body and waits that long.
+        client and model are passed explicitly so each run can use its own provider.
         """
         try:
-            return await _client.chat.completions.create(
-                model=self.model,
+            return await client.chat.completions.create(
+                model=model,
                 messages=messages,
                 tools=self.tools,
                 tool_choice="auto",
@@ -107,14 +83,26 @@ class BaseAgent(ABC):
                     f"(attempt {attempt + 1}/{_MAX_RETRIES})"
                 )
                 await asyncio.sleep(wait)
-                return await self._api_call(messages, attempt + 1)
+                return await self._api_call(messages, client, model, attempt + 1)
             raise
 
-    async def run(self, product_id: str, context: dict) -> dict:
+    async def run(
+        self,
+        product_id: str,
+        context: dict,
+        *,
+        ai_client=None,
+        ai_model: str | None = None,
+    ) -> dict:
         """
         Main agent entry point. Runs the full tool-use loop.
-        Returns structured JSON output dict.
+
+        ai_client / ai_model — org-specific overrides passed by the orchestrator.
+        Falls back to the module-level env-var client when not provided.
         """
+        client = ai_client if ai_client is not None else fallback_client
+        model = ai_model or self.model
+
         start = time.monotonic()
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -125,7 +113,7 @@ class BaseAgent(ABC):
         _MAX_NUDGES = 2   # max retries when model returns non-JSON
 
         while True:
-            response = await self._api_call(messages)
+            response = await self._api_call(messages, client, model)
             choice = response.choices[0]
 
             if choice.finish_reason == "tool_calls":
