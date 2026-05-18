@@ -7,7 +7,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.database import init_db
 from app.middleware.tenant import log_requests
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.routes import auth, products, recommendations, runs, audit, config, users, dashboard
+from app.utils.cache import tool_cache
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -19,7 +21,9 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("MongoDB connected and Beanie initialized.")
     yield
-    logger.info("Shutting down.")
+    # Evict any leftover cache entries and log final stats
+    removed = tool_cache.evict_expired()
+    logger.info(f"Shutting down — evicted {removed} expired cache entries.")
 
 
 app = FastAPI(
@@ -38,6 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(BaseHTTPMiddleware, dispatch=log_requests)
+app.add_middleware(RateLimitMiddleware)
 
 # ─── Routers ────────────────────────────────────────────────
 API_PREFIX = "/api/v1"
