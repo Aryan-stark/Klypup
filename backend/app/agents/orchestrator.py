@@ -83,7 +83,14 @@ async def _save_and_route(product_id, org_id, run_id, context, org_config):
     # Fetch current product price for the recommendation record
     product = await Product.get(product_id)
     current_price = product.current_price if product else 0.0
-    final_price = compliance["final_recommended_price"]
+    # Defensive access — small models sometimes omit or rename the field
+    final_price = (
+        compliance.get("final_recommended_price")
+        or compliance.get("final_price")
+        or compliance.get("recommended_price")
+        or strategy.get("recommended_price")
+        or current_price
+    )
     price_change_pct = round(
         (final_price - current_price) / current_price, 4
     ) if current_price else 0.0
@@ -126,9 +133,9 @@ async def _save_and_route(product_id, org_id, run_id, context, org_config):
         current_price=current_price,
         recommended_price=final_price,
         price_change_pct=price_change_pct,
-        confidence_score=strategy["confidence_score"],
-        strategy_label=strategy["strategy_label"],
-        rationale_summary=compliance["narrative"],
+        confidence_score=strategy.get("confidence_score", 0.5),
+        strategy_label=strategy.get("strategy_label", "unknown"),
+        rationale_summary=compliance.get("narrative", strategy.get("narrative", "")),
         agent_reasoning=agent_reasoning,
         status=status,
     )
@@ -137,13 +144,13 @@ async def _save_and_route(product_id, org_id, run_id, context, org_config):
     if status == RecommendationStatus.AUTO_APPROVED:
         await ecommerce_api.apply_price_change(
             product_id=product_id,
-            new_price=compliance["final_recommended_price"],
+            new_price=final_price,
         )
         await audit_service.log(
             org_id=org_id, action="price_updated",
             product_id=PydanticObjectId(product_id),
             recommendation_id=recommendation.id,
-            new_value={"price": compliance["final_recommended_price"]},
+            new_value={"price": final_price},
         )
 
     return recommendation

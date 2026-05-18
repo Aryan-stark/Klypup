@@ -25,7 +25,7 @@ async def get_competitor_prices(product_id: str, days: int = 7) -> dict:
     Returns the latest competitor prices for a product from the last N days.
     Called by MarketIntelligenceAgent.
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=int(days))
     prices = await CompetitorPrice.find(
         CompetitorPrice.product_id == PydanticObjectId(product_id),
         CompetitorPrice.scraped_at >= cutoff,

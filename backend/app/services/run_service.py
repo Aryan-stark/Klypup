@@ -62,9 +62,10 @@ async def trigger_run(
     if product_filter and product_filter.get("category"):
         conditions.append(Product.category == product_filter["category"])
 
-    # Cap at 3 products per run for free-tier API keys.
-    # Each product = 5 agent calls; free tiers cap at ~15 RPM.
-    products = await Product.find(*conditions).limit(3).to_list()
+    # Cap at 2 products per run.
+    # Gemini 2.5 Flash / Cerebras: 1M TPD — plenty of headroom.
+    # 2 products × 5 agents × ~10k tokens = ~100k tokens per run.
+    products = await Product.find(*conditions).limit(2).to_list()
     if not products:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

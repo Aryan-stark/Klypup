@@ -30,7 +30,7 @@ async def get_demand_signals(product_id: str, days: int = 30) -> dict:
     Returns demand signals for a product from the last N days.
     Called by DemandForecastingAgent.
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=int(days))
     signals = await DemandSignal.find(
         DemandSignal.product_id == PydanticObjectId(product_id),
         DemandSignal.recorded_at >= cutoff,

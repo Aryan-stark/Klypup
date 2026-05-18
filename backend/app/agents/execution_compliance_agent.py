@@ -57,10 +57,15 @@ For each check, call the appropriate tool. If a check fails:
   - For excessive change: clip to max allowed change
   - If multiple violations or you cannot resolve: set compliance_override=true
 
-After calling the tools, output ONLY a valid JSON object with exactly these fields:
-  final_recommended_price (float), compliance_flags (array of strings),
-  compliance_override (bool), approval_routing ("auto_apply"|"human_review"|"escalated"),
-  narrative (string explaining what was validated and any changes made)"""
+After calling the tools, output ONLY a valid JSON object. The key names must be EXACTLY:
+  "final_recommended_price" (float — the price after any compliance clipping),
+  "compliance_flags" (array of strings — empty array [] if no violations),
+  "compliance_override" (boolean — true only if human must review regardless),
+  "approval_routing" (string — one of: "auto_apply", "human_review", "escalated"),
+  "narrative" (string — one paragraph explaining validation results)
+
+Example output shape (fill in real values):
+{"final_recommended_price": 99.99, "compliance_flags": [], "compliance_override": false, "approval_routing": "human_review", "narrative": "All checks passed."}"""
 
     @property
     def tools(self) -> list[dict]:

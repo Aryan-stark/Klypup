@@ -19,9 +19,10 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "klypup_pricing"
 
     # ── AI provider ───────────────────────────────────────
-    GROQ_API_KEY: str = ""       # Groq — optional if using Gemini
-    GEMINI_API_KEY: str = ""     # Google Gemini — optional if using Groq
-    MODEL_NAME: str = "gemini-1.5-pro"  # Added this line with a safe fallback default
+    GROQ_API_KEY: str = ""        # Groq (100k TPD free)
+    GEMINI_API_KEY: str = ""      # Google Gemini (1M TPD free)
+    CEREBRAS_API_KEY: str = ""    # Cerebras (1M TPD free, fastest) ← recommended
+    MODEL_NAME: str = ""          # Override model name (optional)
 
     # ── JWT ────────────────────────────────────────────────
     JWT_SECRET: str    # required — long random string

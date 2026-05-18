@@ -32,22 +32,30 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Auto-select provider: Gemini if key is set, otherwise Groq
-# Auto-select provider: Gemini if key is set, otherwise Groq
-if settings.GEMINI_API_KEY:
+# Provider priority: Cerebras → Gemini → Groq
+# Set only ONE key in .env — whichever provider you want to use.
+if settings.CEREBRAS_API_KEY:
+    from openai import AsyncOpenAI
+    _client = AsyncOpenAI(
+        api_key=settings.CEREBRAS_API_KEY,
+        base_url="https://api.cerebras.ai/v1/",
+    )
+    _DEFAULT_MODEL = settings.MODEL_NAME or "llama3.1-8b"
+    logger.info(f"AI provider: Cerebras ({_DEFAULT_MODEL})")
+elif settings.GEMINI_API_KEY:
     from openai import AsyncOpenAI
     _client = AsyncOpenAI(
         api_key=settings.GEMINI_API_KEY,
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
     )
-    # Check if a MODEL_NAME is set in .env, otherwise default safely
-    _DEFAULT_MODEL = getattr(settings, "MODEL_NAME", "gemini-2.0-flash")
+    _DEFAULT_MODEL = settings.MODEL_NAME or "gemini-2.5-flash"
     logger.info(f"AI provider: Google Gemini ({_DEFAULT_MODEL})")
 else:
     from groq import AsyncGroq
     _client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-    _DEFAULT_MODEL = getattr(settings, "MODEL_NAME", "llama-3.3-70b-versatile")
+    _DEFAULT_MODEL = settings.MODEL_NAME or "llama-3.3-70b-versatile"
     logger.info(f"AI provider: Groq ({_DEFAULT_MODEL})")
+
 _MAX_RETRIES = 3
 
 
@@ -194,13 +202,26 @@ class BaseAgent(ABC):
         except json.JSONDecodeError:
             pass
 
-        # 3. Regex fallback — find the first {...} block in case of surrounding prose
-        m = re.search(r"\{.*\}", text, re.DOTALL)
-        if m:
+        # 3. Iterative JSON finder — handles model echoing tool calls before the output.
+        #    The greedy regex r"\{.*\}" (DOTALL) spans multiple objects and fails.
+        #    Instead: scan for every valid JSON object and return the LAST one,
+        #    which is the agent's actual output (tool call echo is always first).
+        decoder = json.JSONDecoder()
+        pos = 0
+        last_valid: dict | None = None
+        while pos < len(text):
+            brace = text.find("{", pos)
+            if brace == -1:
+                break
             try:
-                return json.loads(m.group())
+                obj, end_idx = decoder.raw_decode(text, brace)
+                if isinstance(obj, dict):
+                    last_valid = obj
+                pos = end_idx
             except json.JSONDecodeError:
-                pass
+                pos = brace + 1
+        if last_valid is not None:
+            return last_valid
 
         logger.warning(f"[{self.name}] could not parse JSON from: {text[:200]!r}")
         return None
