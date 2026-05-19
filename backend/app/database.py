@@ -1,5 +1,3 @@
-import ssl
-
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -23,17 +21,9 @@ async def init_db() -> None:
     mongo_url = settings.MONGODB_URL
     logger.info(f"Connecting to MongoDB: {mongo_url[:40]}...")
     try:
-        # Python 3.12 / OpenSSL 3.x sends a TLS 1.3 ClientHello that Atlas's
-        # load balancer rejects with TLSV1_ALERT_INTERNAL_ERROR.
-        # Force TLS 1.2 via a custom SSL context (pymongo >= 4.6 accepts ssl_context).
-        tls_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        tls_ctx.check_hostname = False
-        tls_ctx.verify_mode = ssl.CERT_NONE
-        tls_ctx.maximum_version = ssl.TLSVersion.TLSv1_2
-
         client = AsyncIOMotorClient(
             mongo_url,
-            ssl_context=tls_ctx,
+            tlsAllowInvalidCertificates=True,
             serverSelectionTimeoutMS=10000,
         )
         await init_beanie(
