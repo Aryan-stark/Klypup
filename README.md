@@ -1,6 +1,5 @@
 # Klypup — Dynamic Pricing Intelligence Dashboard
 
-> Klypup Applied AI Intern Assessment — **Option B**
 
 A full-stack web application where an AI-powered multi-agent system monitors market conditions, generates pricing recommendations with confidence scores, and routes them through a human-in-the-loop approval workflow before executing price changes.
 
