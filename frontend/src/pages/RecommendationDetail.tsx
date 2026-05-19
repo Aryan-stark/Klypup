@@ -51,7 +51,7 @@ export default function RecommendationDetail() {
 
       {/* Price change + confidence */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-lg border bg-card p-5">
+        <div className="glass-card rounded-lg p-5">
           <p className="text-xs text-muted-foreground mb-3">Price Recommendation</p>
           <div className="flex items-center gap-3">
             <span className="text-2xl text-muted-foreground">{formatCurrency(rec.current_price)}</span>
@@ -63,7 +63,7 @@ export default function RecommendationDetail() {
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-5">
+        <div className="glass-card rounded-lg p-5">
           <ConfidenceGauge score={rec.confidence_score} size="lg" />
           <span className="mt-3 inline-block rounded bg-muted px-2 py-1 text-xs font-medium">
             {rec.strategy_label.replace(/_/g, ' ')}
@@ -72,7 +72,7 @@ export default function RecommendationDetail() {
       </div>
 
       {/* Rationale */}
-      <div className="rounded-lg border bg-card p-5">
+      <div className="glass-card rounded-lg p-5">
         <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Summary</p>
         <p className="text-sm leading-relaxed">{rec.rationale_summary}</p>
       </div>
