@@ -1,5 +1,5 @@
 import api from '@/lib/api'
-import type { OrgConfig } from '@/types/config'
+import type { OrgConfig, AIConfig, AIConfigUpdate, AIVerifyRequest, AIVerifyResult } from '@/types/config'
 import type { ApiResponse } from '@/types/api'
 
 export const configService = {
@@ -15,6 +15,21 @@ export const configService = {
 
   async reset(): Promise<ApiResponse<OrgConfig>> {
     const res = await api.post('/config/reset')
+    return res.data
+  },
+
+  async getAI(): Promise<ApiResponse<AIConfig>> {
+    const res = await api.get('/config/ai')
+    return res.data
+  },
+
+  async updateAI(data: AIConfigUpdate): Promise<ApiResponse<AIConfig>> {
+    const res = await api.put('/config/ai', data)
+    return res.data
+  },
+
+  async verifyAI(data: AIVerifyRequest): Promise<ApiResponse<AIVerifyResult>> {
+    const res = await api.post('/config/ai/verify', data)
     return res.data
   },
 }

@@ -2,7 +2,7 @@ import api from '@/lib/api'
 import type { ApiResponse } from '@/types/api'
 
 export const runService = {
-  async trigger(productFilter?: Record<string, unknown>): Promise<ApiResponse<unknown>> {
+  async trigger(productFilter?: Record<string, unknown>): Promise<ApiResponse<{ id: string; total_products: number }>> {
     const res = await api.post('/runs', { product_filter: productFilter ?? null })
     return res.data
   },
