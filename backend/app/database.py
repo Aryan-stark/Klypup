@@ -11,6 +11,7 @@ from app.models.demand_signal import DemandSignal
 from app.models.pricing_run import PricingRun
 from app.models.pricing_recommendation import PricingRecommendation
 from app.models.audit_log import AuditLog
+from app.models.invitation import Invitation
 
 
 async def init_db() -> None:
@@ -27,5 +28,6 @@ async def init_db() -> None:
             PricingRun,
             PricingRecommendation,
             AuditLog,
+            Invitation,
         ],
     )

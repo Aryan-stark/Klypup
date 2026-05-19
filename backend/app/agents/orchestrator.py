@@ -185,11 +185,25 @@ def _route_status(confidence: float, compliance_override: bool,
     """
     Pure Python routing — same inputs always produce same output.
     This is why routing is NOT delegated to the AI.
+
+    Threshold zones (defaults):
+      >= auto_apply_threshold  (0.90) → AUTO_APPROVED  (no human needed)
+      >= human_review_threshold(0.70) → PENDING        (analyst reviews)
+      >= reject_below_threshold(0.50) → PENDING        (low confidence, still worth a look)
+      <  reject_below_threshold(0.50) → REJECTED       (too uncertain to queue)
     """
     if compliance_override:
         return RecommendationStatus.ESCALATED
-    if confidence >= org_config.get("auto_apply_threshold", 0.90):
+
+    auto   = org_config.get("auto_apply_threshold",   0.90)
+    review = org_config.get("human_review_threshold", 0.70)
+    floor  = org_config.get("reject_below_threshold", 0.50)
+
+    if confidence >= auto:
         return RecommendationStatus.AUTO_APPROVED
-    if confidence >= org_config.get("human_review_threshold", 0.70):
+    if confidence >= review:
         return RecommendationStatus.PENDING
-    return RecommendationStatus.REJECTED
+    if confidence < floor:
+        return RecommendationStatus.REJECTED
+    # Between reject_floor and review_threshold — low confidence but still actionable
+    return RecommendationStatus.PENDING
