@@ -14,13 +14,14 @@ Output it produces (stored in context["inventory_cost"]):
     "narrative": str
   }
 """
-from app.agents.base_agent import BaseAgent, _DEFAULT_MODEL
+from app.agents.base_agent import BaseAgent
+from app.utils.ai_client import DEFAULT_MODEL
 from app.tools import inventory_data
 
 
 class InventoryCostAgent(BaseAgent):
     name = "inventory_cost"
-    model = _DEFAULT_MODEL    # inherits whichever provider is active (Gemini or Groq)
+    model = DEFAULT_MODEL
 
     @property
     def system_prompt(self) -> str:

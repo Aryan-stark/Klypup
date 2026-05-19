@@ -135,13 +135,17 @@ async def list_recommendations(
     conditions = [PricingRecommendation.org_id == org_id]
 
     if status_filter:
+        # Accept a single value ("pending") or comma-separated list ("pending,escalated")
+        raw_statuses = [s.strip() for s in status_filter.split(",") if s.strip()]
         try:
-            conditions.append(
-                PricingRecommendation.status == RecommendationStatus(status_filter)
-            )
-        except ValueError:
+            parsed = [RecommendationStatus(s) for s in raw_statuses]
+        except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"Unknown status: {status_filter}")
+                                detail=f"Unknown status: {exc}")
+        if len(parsed) == 1:
+            conditions.append(PricingRecommendation.status == parsed[0])
+        else:
+            conditions.append(In(PricingRecommendation.status, parsed))
 
     if run_id:
         try:

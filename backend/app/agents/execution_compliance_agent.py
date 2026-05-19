@@ -29,13 +29,14 @@ Status routing (done in orchestrator, NOT here):
   confidence >= review_threshold → "pending"
   else → "rejected"
 """
-from app.agents.base_agent import BaseAgent, _DEFAULT_MODEL
+from app.agents.base_agent import BaseAgent
+from app.utils.ai_client import DEFAULT_MODEL
 from app.tools import inventory_data
 
 
 class ExecutionComplianceAgent(BaseAgent):
     name = "execution_compliance"
-    model = _DEFAULT_MODEL   # inherits whichever provider is active (Gemini or Groq)
+    model = DEFAULT_MODEL
 
     @property
     def system_prompt(self) -> str:
