@@ -1,5 +1,3 @@
-import ssl
-
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -17,10 +15,7 @@ from app.models.invitation import Invitation
 
 
 async def init_db() -> None:
-    tls_context = ssl.create_default_context()
-    tls_context.check_hostname = False
-    tls_context.verify_mode = ssl.CERT_NONE
-    client = AsyncIOMotorClient(settings.MONGODB_URL, ssl_context=tls_context)
+    client = AsyncIOMotorClient(settings.MONGODB_URL, tlsAllowInvalidCertificates=True)
     await init_beanie(
         database=client[settings.MONGODB_DB_NAME],
         document_models=[
