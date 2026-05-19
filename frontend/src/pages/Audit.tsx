@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { useAudit } from '@/hooks/useAudit'
+import { useAuthStore } from '@/store/authStore'
 import AuditTable from '@/components/audit/AuditTable'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import type { AuditLog } from '@/types/audit'
@@ -18,8 +19,34 @@ const ACTION_OPTIONS = [
 export default function Audit() {
   const [action, setAction] = useState('')
   const [page, setPage] = useState(1)
+  const [exporting, setExporting] = useState(false)
 
   const { data, isLoading } = useAudit({ action: action || undefined, page, per_page: 50 })
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const token = useAuthStore.getState().accessToken
+      const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'
+      const res = await fetch(`${baseURL}/audit/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'audit_log.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('CSV export error:', err)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const entries: AuditLog[] = (data?.data ?? []) as AuditLog[]
   const meta = data?.meta
@@ -28,14 +55,14 @@ export default function Audit() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Audit Trail</h1>
-        <a
-          href="/api/v1/audit/export"
-          download
-          className="flex items-center gap-2 px-3 py-2 rounded border text-sm hover:bg-muted"
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-2 px-3 py-2 rounded border text-sm hover:bg-muted disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
-          Export CSV
-        </a>
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </button>
       </div>
 
       <div className="flex gap-3">

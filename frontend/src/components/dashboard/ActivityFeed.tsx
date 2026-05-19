@@ -24,7 +24,7 @@ export default function ActivityFeed({ items }: { items: AuditLog[] }) {
     return <p className="text-sm text-muted-foreground p-4">No activity yet.</p>
   }
   return (
-    <div className="rounded-lg border bg-card divide-y">
+    <div className="glass-card rounded-lg divide-y">
       {items.map((item) => (
         <div key={item.id} className="flex items-center gap-3 px-4 py-3">
           <ActionBadge action={item.action} />

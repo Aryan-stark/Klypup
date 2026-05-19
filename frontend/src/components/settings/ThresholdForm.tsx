@@ -78,7 +78,7 @@ export default function ThresholdForm() {
   return (
     <div className="space-y-6">
       {/* Confidence thresholds */}
-      <div className="rounded-lg border bg-card p-5">
+      <div className="glass-card rounded-lg p-5">
         <h3 className="text-sm font-semibold mb-1">Confidence Thresholds</h3>
         <p className="text-xs text-muted-foreground mb-4">Controls when AI recommendations are auto-applied vs. queued for review.</p>
         <ThresholdField label="Auto-apply threshold" description="Recommendations above this confidence are applied automatically" value={config.auto_apply_threshold} field="auto_apply_threshold" onChange={handleChange} />
@@ -87,7 +87,7 @@ export default function ThresholdForm() {
       </div>
 
       {/* Price change caps */}
-      <div className="rounded-lg border bg-card p-5">
+      <div className="glass-card rounded-lg p-5">
         <h3 className="text-sm font-semibold mb-1">Price Change Caps</h3>
         <p className="text-xs text-muted-foreground mb-4">Maximum allowed price movement per pricing run.</p>
         <ThresholdField label="Max price increase" description="Maximum % a price can be raised in one run" value={config.max_price_increase_pct} field="max_price_increase_pct" onChange={handleChange} />
@@ -95,14 +95,14 @@ export default function ThresholdForm() {
       </div>
 
       {/* Margin floor */}
-      <div className="rounded-lg border bg-card p-5">
+      <div className="glass-card rounded-lg p-5">
         <h3 className="text-sm font-semibold mb-1">Margin Floor</h3>
         <p className="text-xs text-muted-foreground mb-4">Minimum gross margin the AI must preserve on every recommendation.</p>
         <ThresholdField label="Global margin floor" description="AI will never recommend a price below cost × (1 + floor)" value={config.global_margin_floor_pct} field="global_margin_floor_pct" onChange={handleChange} />
       </div>
 
       {/* Escalation */}
-      <div className="rounded-lg border bg-card p-5">
+      <div className="glass-card rounded-lg p-5">
         <h3 className="text-sm font-semibold mb-1">Escalation</h3>
         <div className="flex items-center justify-between py-3">
           <div>
