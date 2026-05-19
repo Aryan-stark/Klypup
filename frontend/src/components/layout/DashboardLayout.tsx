@@ -1,6 +1,5 @@
 /**
- * DashboardLayout.tsx — The persistent shell around all dashboard pages.
- * Renders Sidebar + Topbar, with page content in <Outlet />.
+ * DashboardLayout.tsx — Persistent shell: glassmorphism sidebar + topbar + mesh bg.
  */
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
@@ -8,7 +7,7 @@ import Topbar from './Topbar'
 
 export default function DashboardLayout() {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-mesh-light overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar />

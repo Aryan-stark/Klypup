@@ -21,7 +21,7 @@ export default function RecommendationCard({ rec }: { rec: Recommendation }) {
   return (
     <Link
       to={`/recommendations/${rec.id}`}
-      className="block rounded-lg border bg-card p-4 hover:border-primary transition-colors space-y-3"
+      className="block glass-card rounded-lg p-4 hover:border-primary transition-colors space-y-3"
     >
       <div className="flex items-start justify-between gap-2">
         <div>

@@ -41,7 +41,7 @@ export default function ApprovalActions({ id, status, currentPrice }: Props) {
 
   if (view === 'reject') {
     return (
-      <div className="rounded-lg border bg-card p-4 space-y-3">
+      <div className="glass-card rounded-lg p-4 space-y-3">
         <p className="text-sm font-medium">Reject Recommendation</p>
         <input
           className="w-full rounded border px-3 py-2 text-sm bg-background"
@@ -77,7 +77,7 @@ export default function ApprovalActions({ id, status, currentPrice }: Props) {
 
   if (view === 'modify') {
     return (
-      <div className="rounded-lg border bg-card p-4 space-y-3">
+      <div className="glass-card rounded-lg p-4 space-y-3">
         <p className="text-sm font-medium">Override Price & Approve</p>
         <div>
           <label className="text-xs text-muted-foreground">Override Price ($)</label>

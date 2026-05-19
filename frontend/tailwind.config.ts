@@ -1,14 +1,17 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  // Only generate CSS for files that actually use Tailwind classes
-  // This keeps the production bundle small
+  darkMode: 'class',   // driven by ThemeToggle adding/removing .dark on <html>
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
+      backgroundImage: {
+        // Required by the Hero lamp animation (Login page)
+        'gradient-conic': 'conic-gradient(var(--conic-position), var(--tw-gradient-stops))',
+      },
       // shadcn/ui requires these CSS variable-based colors
       colors: {
         border: 'hsl(var(--border))',

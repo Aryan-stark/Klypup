@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* shadcn/ui CSS variables — defines the design token system */
+/* ── shadcn/ui design tokens ──────────────────────────────────────────────── */
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 220 25% 97%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -19,18 +19,18 @@
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
+    --border: 214.3 31.8% 88%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --radius: 0.6rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
+    --background: 222 28% 8%;
+    --foreground: 210 40% 96%;
+    --card: 222 25% 11%;
+    --card-foreground: 210 40% 96%;
+    --primary: 210 40% 96%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -40,8 +40,83 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 20%;
+    --input: 217.2 32.6% 20%;
     --ring: 212.7 26.8% 83.9%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+/* ── Glassmorphism utilities ──────────────────────────────────────────────── */
+@layer utilities {
+  /* Sidebar glass */
+  .glass-sidebar {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-right: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .dark .glass-sidebar {
+    background: rgba(15, 20, 35, 0.75);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* Topbar glass */
+  .glass-topbar {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .dark .glass-topbar {
+    background: rgba(15, 20, 35, 0.80);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* Card glass — for dashboard cards, panels */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.70);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .dark .glass-card {
+    background: rgba(20, 28, 50, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Mesh gradient background helper */
+  .bg-mesh-light {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(at 20% 20%, hsla(217, 91%, 80%, 0.18) 0px, transparent 55%),
+      radial-gradient(at 80% 10%, hsla(189, 86%, 80%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 60% 85%, hsla(262, 83%, 82%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 5%  75%, hsla(217, 91%, 82%, 0.10) 0px, transparent 45%);
+  }
+  .dark .bg-mesh-light,
+  .bg-mesh-dark {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(at 20% 20%, hsla(217, 60%, 25%, 0.30) 0px, transparent 55%),
+      radial-gradient(at 80% 10%, hsla(189, 50%, 20%, 0.20) 0px, transparent 50%),
+      radial-gradient(at 60% 85%, hsla(262, 50%, 22%, 0.22) 0px, transparent 50%),
+      radial-gradient(at 5%  75%, hsla(217, 60%, 22%, 0.18) 0px, transparent 45%);
   }
 }

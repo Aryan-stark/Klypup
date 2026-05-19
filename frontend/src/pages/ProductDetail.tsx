@@ -47,7 +47,7 @@ export default function ProductDetail() {
           { label: 'Gross Margin', value: formatPercent(p.margin_pct) },
           { label: 'Stock', value: p.stock_quantity },
         ].map(({ label, value }) => (
-          <div key={label} className="rounded-lg border bg-card p-4">
+          <div key={label} className="glass-card rounded-lg p-4">
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className="text-xl font-bold mt-1">{value}</p>
           </div>
@@ -71,7 +71,7 @@ export default function ProductDetail() {
         {history.isLoading ? (
           <LoadingSpinner />
         ) : history.data?.data && (history.data.data as unknown[]).length > 0 ? (
-          <div className="rounded-lg border overflow-hidden">
+          <div className="glass-card rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                 <tr>

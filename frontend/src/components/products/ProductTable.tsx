@@ -26,7 +26,7 @@ export default function ProductTable({ products }: { products: Product[] }) {
   }
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="glass-card rounded-lg overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
           <tr>

@@ -1,6 +1,10 @@
-import { useRuns } from '@/hooks/useRuns'
+import { useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { Play } from 'lucide-react'
+import { useRuns, useTriggerRun } from '@/hooks/useRuns'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import EmptyState from '@/components/common/EmptyState'
+import RunAgentPlan from '@/components/runs/RunAgentPlan'
 import { formatDateTime } from '@/lib/utils'
 
 const STATUS_STYLE: Record<string, string> = {
@@ -25,14 +29,56 @@ interface Run {
 export default function Runs() {
   const { data, isLoading } = useRuns()
   const runs: Run[] = (data?.data ?? []) as Run[]
+  const trigger = useTriggerRun()
+
+  const [activeRunId,   setActiveRunId]   = useState<string | null>(null)
+  const [totalProducts, setTotalProducts] = useState(0)
+  const [modalOpen,     setModalOpen]     = useState(false)
+
+  const handleTrigger = async () => {
+    try {
+      const result = await trigger.mutateAsync()
+      const run = result.data as { id: string; total_products: number }
+      setTotalProducts(run.total_products ?? 0)
+      setActiveRunId(run.id)
+      setModalOpen(true)
+    } catch {
+      /* error handled by mutation */
+    }
+  }
 
   return (
+    <>
+    <AnimatePresence>
+      {activeRunId && (
+        <RunAgentPlan
+          key={activeRunId}
+          runId={activeRunId}
+          totalProducts={totalProducts}
+          isOpen={modalOpen}
+          onClose={() => setModalOpen((p) => !p)}
+          onDone={() => { setActiveRunId(null); setModalOpen(false) }}
+        />
+      )}
+    </AnimatePresence>
+
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Pricing Runs</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          History of all AI pricing pipeline executions.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Pricing Runs</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            History of all AI pricing pipeline executions.
+          </p>
+        </div>
+        <button
+          onClick={activeRunId ? () => setModalOpen(true) : handleTrigger}
+          disabled={trigger.isPending}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground
+                     text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity shadow-sm"
+        >
+          <Play className="h-4 w-4" />
+          {trigger.isPending ? 'Starting…' : activeRunId ? 'View Pipeline' : 'Run Pricing'}
+        </button>
       </div>
 
       {isLoading && <LoadingSpinner />}
@@ -42,7 +88,7 @@ export default function Runs() {
       )}
 
       {!isLoading && runs.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="glass-card rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
@@ -106,5 +152,6 @@ export default function Runs() {
         </div>
       )}
     </div>
+    </>
   )
 }
