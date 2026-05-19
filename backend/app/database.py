@@ -21,12 +21,7 @@ async def init_db() -> None:
     mongo_url = settings.MONGODB_URL
     logger.info(f"Connecting to MongoDB: {mongo_url[:40]}...")
     try:
-        import certifi
-        client = AsyncIOMotorClient(
-            mongo_url,
-            tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=10000,
-        )
+        client = AsyncIOMotorClient(mongo_url)
         await init_beanie(
             database=client[settings.MONGODB_DB_NAME],
             document_models=[
