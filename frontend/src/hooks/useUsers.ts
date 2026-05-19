@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { userService } from '@/services/userService'
-import type { InviteUserRequest, UpdateUserRequest } from '@/types/user'
+import type { InviteUserRequest, UpdateUserRequest, CreateInviteRequest } from '@/types/user'
 
 export function useUsers() {
   return useQuery({
@@ -23,5 +23,11 @@ export function useUpdateUser() {
     mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
       userService.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
+export function useCreateInvite() {
+  return useMutation({
+    mutationFn: (data: CreateInviteRequest) => userService.createInvite(data),
   })
 }

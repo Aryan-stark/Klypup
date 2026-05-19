@@ -1,22 +1,23 @@
 import { useState } from 'react'
-import { UserPlus, ShieldCheck, User } from 'lucide-react'
-import { useUsers, useInviteUser, useUpdateUser } from '@/hooks/useUsers'
+import { UserPlus, ShieldCheck, User, Copy, Check, Link as LinkIcon } from 'lucide-react'
+import { useUsers, useCreateInvite, useUpdateUser } from '@/hooks/useUsers'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { isValidEmail } from '@/lib/utils'
-import type { OrgUser } from '@/types/user'
+import type { OrgUser, Invitation } from '@/types/user'
 
 export default function Users() {
   const { data, isLoading } = useUsers()
-  const invite = useInviteUser()
+  const createInvite = useCreateInvite()
   const updateUser = useUpdateUser()
 
   const [showInvite, setShowInvite] = useState(false)
-  const [form, setForm] = useState({
-    full_name: '', email: '', password: '', role: 'pricing_analyst' as const,
-  })
+  const [form, setForm] = useState({ email: '', role: 'pricing_analyst' as 'admin' | 'pricing_analyst' })
   const [emailError, setEmailError] = useState('')
   const [inviteError, setInviteError] = useState('')
-  const [inviteSuccess, setInviteSuccess] = useState('')
+
+  // Generated invite — shown after a successful createInvite call
+  const [generatedInvite, setGeneratedInvite] = useState<Invitation | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const validateEmail = (value: string) => {
     if (!value) { setEmailError('Email is required'); return false }
@@ -27,20 +28,34 @@ export default function Users() {
 
   const users: OrgUser[] = (data?.data ?? []) as OrgUser[]
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const inviteUrl = generatedInvite
+    ? `${window.location.origin}/join?token=${generatedInvite.token}`
+    : ''
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(inviteUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleCreateInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     setInviteError('')
-    setInviteSuccess('')
     if (!validateEmail(form.email)) return
     try {
-      const res = await invite.mutateAsync(form)
-      setInviteSuccess(`User ${res.data.email} created. Temporary password: ${form.password}`)
-      setForm({ full_name: '', email: '', password: '', role: 'pricing_analyst' })
+      const res = await createInvite.mutateAsync(form)
+      setGeneratedInvite(res.data)
+      setForm({ email: '', role: 'pricing_analyst' })
       setEmailError('')
-      setShowInvite(false)
     } catch {
-      setInviteError('Failed to create user. Email may already exist.')
+      setInviteError('Failed to create invite. The email may already belong to an existing user.')
     }
+  }
+
+  const handleNewInvite = () => {
+    setGeneratedInvite(null)
+    setInviteError('')
+    setCopied(false)
   }
 
   const toggleActive = (user: OrgUser) => {
@@ -59,7 +74,7 @@ export default function Users() {
           <p className="text-sm text-muted-foreground mt-1">Manage users in your organisation.</p>
         </div>
         <button
-          onClick={() => { setShowInvite(true); setInviteSuccess('') }}
+          onClick={() => { setShowInvite(true); setGeneratedInvite(null); setInviteError('') }}
           className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium"
         >
           <UserPlus className="h-4 w-4" />
@@ -67,87 +82,130 @@ export default function Users() {
         </button>
       </div>
 
-      {inviteSuccess && (
-        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
-          {inviteSuccess}
-        </div>
-      )}
-
-      {/* Invite form */}
+      {/* Invite panel */}
       {showInvite && (
         <div className="glass-card rounded-lg p-5 space-y-4">
-          <h2 className="text-sm font-semibold">New user</h2>
-          <form onSubmit={handleInvite} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Full name</label>
-              <input
-                required
-                className="w-full rounded-md border px-3 py-2 text-sm bg-background"
-                value={form.full_name}
-                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-              />
+          {generatedInvite ? (
+            /* ── Step 2: invite link generated ── */
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                  <Check className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Invite link ready</p>
+                  <p className="text-xs text-muted-foreground">
+                    Send this link to <span className="font-medium">{generatedInvite.email}</span>.
+                    It expires in 7 days and can only be used once.
+                  </p>
+                </div>
+              </div>
+
+              {/* Role badge */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Role:</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  generatedInvite.role === 'admin'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {generatedInvite.role === 'admin' ? 'Admin' : 'Pricing Analyst'}
+                </span>
+              </div>
+
+              {/* Link copy box */}
+              <div className="rounded-md border bg-muted/40 flex items-center gap-2 px-3 py-2">
+                <LinkIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <code className="flex-1 text-xs text-foreground/80 truncate">{inviteUrl}</code>
+                <button
+                  onClick={handleCopy}
+                  className="shrink-0 flex items-center gap-1.5 text-xs font-medium
+                             text-primary hover:text-primary/80 transition-colors"
+                >
+                  {copied
+                    ? <><Check className="h-3.5 w-3.5" /> Copied</>
+                    : <><Copy className="h-3.5 w-3.5" /> Copy</>}
+                </button>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={handleNewInvite}
+                  className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium"
+                >
+                  Invite another
+                </button>
+                <button
+                  onClick={() => { setShowInvite(false); setGeneratedInvite(null) }}
+                  className="px-4 py-2 rounded-md border text-sm"
+                >
+                  Done
+                </button>
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Email</label>
-              <input
-                type="text"
-                inputMode="email"
-                autoComplete="email"
-                required
-                className={`w-full rounded-md border px-3 py-2 text-sm bg-background ${emailError ? 'border-destructive' : ''}`}
-                value={form.email}
-                onChange={(e) => {
-                  setForm({ ...form, email: e.target.value })
-                  if (emailError) validateEmail(e.target.value)
-                }}
-                onBlur={(e) => validateEmail(e.target.value)}
-              />
-              {emailError && (
-                <p className="text-xs text-destructive mt-0.5">{emailError}</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Temporary password</label>
-              <input
-                type="text"
-                required
-                minLength={8}
-                className="w-full rounded-md border px-3 py-2 text-sm bg-background"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Role</label>
-              <select
-                className="w-full rounded-md border px-3 py-2 text-sm bg-background"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as typeof form.role })}
-              >
-                <option value="pricing_analyst">Pricing Analyst</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            {inviteError && (
-              <p className="col-span-2 text-sm text-destructive">{inviteError}</p>
-            )}
-            <div className="col-span-2 flex gap-2">
-              <button
-                type="submit"
-                disabled={invite.isPending}
-                className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-              >
-                {invite.isPending ? 'Creating…' : 'Create user'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowInvite(false)}
-                className="px-4 py-2 rounded-md border text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          ) : (
+            /* ── Step 1: email + role form ── */
+            <>
+              <div>
+                <h2 className="text-sm font-semibold">Invite a team member</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  We'll generate a link they can use to create their own password.
+                </p>
+              </div>
+              <form onSubmit={handleCreateInvite} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Work email</label>
+                  <input
+                    type="text"
+                    inputMode="email"
+                    autoComplete="email"
+                    required
+                    placeholder="colleague@company.com"
+                    className={`w-full rounded-md border px-3 py-2 text-sm bg-background ${emailError ? 'border-destructive' : ''}`}
+                    value={form.email}
+                    onChange={(e) => {
+                      setForm({ ...form, email: e.target.value })
+                      if (emailError) validateEmail(e.target.value)
+                    }}
+                    onBlur={(e) => validateEmail(e.target.value)}
+                  />
+                  {emailError && (
+                    <p className="text-xs text-destructive mt-0.5">{emailError}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Role</label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2 text-sm bg-background"
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value as typeof form.role })}
+                  >
+                    <option value="pricing_analyst">Pricing Analyst</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                {inviteError && (
+                  <p className="col-span-2 text-sm text-destructive">{inviteError}</p>
+                )}
+                <div className="col-span-2 flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={createInvite.isPending}
+                    className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+                  >
+                    {createInvite.isPending ? 'Generating…' : 'Generate invite link'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowInvite(false)}
+                    className="px-4 py-2 rounded-md border text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       )}
 

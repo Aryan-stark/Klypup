@@ -29,3 +29,28 @@ class UpdateUserRequest(BaseModel):
     role: str | None = None
     is_active: bool | None = None
     full_name: str | None = None
+
+
+# ── Invitation flow ────────────────────────────────────────────────────────────
+
+class CreateInviteRequest(BaseModel):
+    """Admin sends email + role. No password — the invitee sets their own."""
+    email: EmailStr
+    role: str = "pricing_analyst"
+
+
+class InviteOut(BaseModel):
+    """Returned to admin after creating an invite. token is used to build the join URL."""
+    token: str
+    email: str
+    role: str
+    org_name: str | None
+    expires_at: str
+    accepted_at: str | None
+    created_at: str
+
+
+class AcceptInviteRequest(BaseModel):
+    """Body the invitee submits on the /join page."""
+    full_name: str
+    password: str
