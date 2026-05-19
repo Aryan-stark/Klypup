@@ -1,9 +1,8 @@
-FROM python:3.12-slim
+# Bullseye (Debian 11) ships OpenSSL 1.1.1 which works with MongoDB Atlas.
+# Bookworm (Debian 12) ships OpenSSL 3.x whose TLS 1.3 handshake is rejected by Atlas.
+FROM python:3.11-slim-bullseye
 
-# Install CA certs and patch OpenSSL config to cap TLS at 1.2
-# (Python 3.12 / OpenSSL 3.x sends TLS 1.3 ClientHello that MongoDB Atlas rejects)
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
-RUN python3 -c "import pathlib; p=pathlib.Path('/etc/ssl/openssl.cnf'); p.write_text(p.read_text().replace('[system_default_sect]', '[system_default_sect]\nMaxProtocol = TLSv1.2\nCipherString = DEFAULT@SECLEVEL=1'))"
 
 # Force Python stdout/stderr to flush immediately — prevents log loss on crash
 ENV PYTHONUNBUFFERED=1
