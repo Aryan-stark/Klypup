@@ -2,8 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json .
-RUN npm install
+# Copy both package.json and package-lock.json for reproducible installs
+COPY package*.json ./
+RUN npm ci
 
 COPY . .
 
