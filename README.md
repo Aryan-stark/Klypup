@@ -37,7 +37,9 @@ A full-stack web application where an AI-powered multi-agent system monitors mar
 | **Recommendation Detail** | Per-agent accordion with tool call traces, output signals, raw JSON |
 | **Approval Workflow** | Approve / reject / modify — auto-executes when confidence ≥ threshold |
 | **Audit Trail** | Immutable log of every price action, CSV export with JWT auth |
-| **Admin Config Panel** | Confidence thresholds, margin floors, escalation rules per org |
+| **Admin Config Panel** | Confidence thresholds, margin floors, price caps, escalation rules per org |
+| **AI Provider Config** | Set provider / model / API key per-org in Settings UI with live connection test |
+| **Invite flow** | Admin generates a single-use invite link; invitee sets their own password on `/join` |
 | **TTL Caching** | Tool call results cached 5–60 min — eliminates redundant DB reads |
 | **Rate Limiting** | Sliding-window: 10/min on auth, 5/min on run triggers, 200/min general |
 | **Dark / Light Mode** | CSS `darkMode: "class"` + localStorage persistence, no flash on load |
@@ -48,13 +50,15 @@ A full-stack web application where an AI-powered multi-agent system monitors mar
 ## Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- At least one AI API key — pick any one provider:
+- At least one AI API key — pick any provider (priority: Cerebras → Gemini → Groq):
 
-| Provider | Key name in `.env` | Free tier |
+| Provider | Env var | Free tier |
 |---|---|---|
 | **Cerebras** (fastest, recommended) | `CEREBRAS_API_KEY` | [cloud.cerebras.ai](https://cloud.cerebras.ai) |
 | Google Gemini | `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com) |
 | Groq | `GROQ_API_KEY` | [console.groq.com](https://console.groq.com) |
+
+You can also set the provider per-organisation after login in **Settings → AI Configuration** without touching `.env`.
 
 ---
 
@@ -67,23 +71,62 @@ cd Klypup
 
 # 2. Environment variables
 cp .env.example .env
+```
 
-# Open .env and set at least one of:
-#   CEREBRAS_API_KEY=...   ← recommended
-#   GEMINI_API_KEY=...
-#   GROQ_API_KEY=...
-# Also set:
-#   JWT_SECRET=any-long-random-string
+Open `.env` and fill in the required values:
 
-# 3. Start all services
+```bash
+# Required — pick at least one AI provider key
+CEREBRAS_API_KEY=csk-...        # recommended (fastest free tier)
+# GEMINI_API_KEY=AIza...
+# GROQ_API_KEY=gsk_...
+
+# Required — any long random string (used to sign JWTs)
+JWT_SECRET=change-me-to-a-long-random-string
+
+# These are pre-filled correctly for Docker — do not change unless you know why
+MONGODB_URL=mongodb://mongo:27017
+VITE_API_URL=http://localhost:8000/api/v1
+```
+
+```bash
+# 3. Start all three services (MongoDB + backend + frontend)
 docker compose up
 
-# 4. Seed demo data (first time only — ~4 600 documents)
+# First run takes ~2–3 min to pull images and install dependencies.
+# You'll see "MongoDB connected and Beanie initialized." when the backend is ready.
+
+# 4. Seed demo data (first time only — ~4 600 documents across 2 orgs)
 docker compose exec backend python -m app.utils.seed
 
 # 5. Open the app
 # Frontend  → http://localhost:5173
 # API docs  → http://localhost:8000/api/docs
+# Health    → http://localhost:8000/health
+```
+
+### Running without Docker
+
+If you prefer to run services directly:
+
+```bash
+# Terminal 1 — MongoDB (or use MongoDB Atlas / local install)
+# Ensure MongoDB is running on localhost:27017
+
+# Terminal 2 — Backend
+cd backend
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp ../.env.example .env         # edit as above, set MONGODB_URL=mongodb://localhost:27017
+uvicorn app.main:app --reload --port 8000
+
+# Terminal 3 — Frontend
+cd frontend
+npm install
+# Create frontend/.env with:
+#   VITE_API_URL=http://localhost:8000/api/v1
+npm run dev
 ```
 
 ---
@@ -105,9 +148,14 @@ Two fully-isolated organisations are seeded. Use two different browsers to test 
 
 | Goal | How |
 |---|---|
-| Add a user to your org | Sidebar → **Team** → **Invite user** → set role |
+| Invite a team member | Sidebar → **Team** → **Invite user** → enter email + role → copy the generated link → send it to them |
+| Accept an invite | Open the link → `/join?token=...` → enter your name + password → logged in immediately |
 | Promote analyst to admin | **Team** → Role dropdown → Admin |
-| Create a new tenant | **Create account** tab on the login page |
+| Deactivate a user | **Team** → Deactivate button |
+| Create a new isolated org | **Create account** tab on the login page |
+
+Invite links are single-use, expire after 7 days, and do not require you to share a password.
+The invitee sets their own password on the `/join` page.
 
 ---
 
@@ -137,6 +185,7 @@ Two fully-isolated organisations are seeded. Use two different browsers to test 
 
 - Competitor price data is mock (no live web scraper)
 - Demand signals are synthetic (no Google Trends integration)
-- SSE run progress uses in-memory queues — does not work across multiple backend instances (Redis pub/sub would fix this)
-- Org invitations show credentials directly in UI — no email sending (no SMTP setup)
+- SSE run progress uses in-memory queues — does not survive backend restarts or scale beyond one instance (Redis pub/sub would fix this)
+- Invite links must be shared manually (copy/paste) — no SMTP email sending
 - In-memory TTL cache resets on container restart — no Redis persistence
+- Free-tier AI providers have rate limits; the pipeline retries on 429 but may be slow under concurrent runs
