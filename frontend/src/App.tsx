@@ -22,6 +22,7 @@ import RoleGuard from '@/components/layout/RoleGuard'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 
 import Login from '@/pages/Login'
+import Join from '@/pages/Join'
 import Dashboard from '@/pages/Dashboard'
 import Products from '@/pages/Products'
 import ProductDetail from '@/pages/ProductDetail'
@@ -38,6 +39,7 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
+      <Route path="/join" element={<Join />} />
 
       {/* Protected — all inside DashboardLayout (sidebar + topbar) */}
       <Route element={<PrivateRoute />}>

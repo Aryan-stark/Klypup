@@ -80,7 +80,10 @@ export default function ThresholdForm() {
       {/* Confidence thresholds */}
       <div className="glass-card rounded-lg p-5">
         <h3 className="text-sm font-semibold mb-1">Confidence Thresholds</h3>
-        <p className="text-xs text-muted-foreground mb-4">Controls when AI recommendations are auto-applied vs. queued for review.</p>
+        <p className="text-xs text-muted-foreground mb-4">
+          Controls how AI recommendations are routed on the <strong>next pricing run</strong>.
+          Existing recommendations are not retroactively re-evaluated.
+        </p>
         <ThresholdField label="Auto-apply threshold" description="Recommendations above this confidence are applied automatically" value={config.auto_apply_threshold} field="auto_apply_threshold" onChange={handleChange} />
         <ThresholdField label="Human review threshold" description="Recommendations above this confidence are queued for analyst review" value={config.human_review_threshold} field="human_review_threshold" onChange={handleChange} />
         <ThresholdField label="Reject below threshold" description="Recommendations below this confidence are auto-rejected" value={config.reject_below_threshold} field="reject_below_threshold" onChange={handleChange} />

@@ -175,8 +175,10 @@ export default function RunAgentPlan({ runId, totalProducts, isOpen, onClose, on
   const [runStatus, setRunStatus] = useState<"running" | "completed" | "failed">("running")
   const [errorMsg,  setErrorMsg]  = useState("")
 
-  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null)
-  const sourceRef = useRef<EventSource | null>(null)
+  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null)
+  const sourceRef      = useRef<EventSource | null>(null)
+  // Track whether the run already finished — read inside onerror to avoid stale closure
+  const completedRef   = useRef(false)
 
   // Advance through agents on a timer (~12s each)
   const startAgentTimer = useCallback((fromAgent: number) => {
@@ -228,6 +230,7 @@ export default function RunAgentPlan({ runId, totalProducts, isOpen, onClose, on
 
         if (data.event === "completed") {
           if (timerRef.current) clearInterval(timerRef.current)
+          completedRef.current = true
           setAgentStatuses(AGENTS.map(() => "completed"))
           setProductsProcessed(data.products_processed)
           setRunStatus("completed")
@@ -236,6 +239,7 @@ export default function RunAgentPlan({ runId, totalProducts, isOpen, onClose, on
 
         if (data.event === "failed") {
           if (timerRef.current) clearInterval(timerRef.current)
+          completedRef.current = true
           setAgentStatuses((prev) => prev.map((s) => s === "in-progress" ? "failed" : s))
           setRunStatus("failed")
           setErrorMsg(data.error ?? "Unknown error")
@@ -244,8 +248,11 @@ export default function RunAgentPlan({ runId, totalProducts, isOpen, onClose, on
       } catch { /* malformed event */ }
     }
 
+    // onerror fires when the SSE connection closes — including the normal close after
+    // the backend sends "completed". Guard with completedRef (a ref, not state) to avoid
+    // the stale-closure bug where runStatus always reads "running" inside this handler.
     es.onerror = () => {
-      if (runStatus === "running") {
+      if (!completedRef.current) {
         setRunStatus("failed")
         setErrorMsg("Connection lost")
       }
