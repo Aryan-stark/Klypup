@@ -20,12 +20,12 @@ logger = get_logger(__name__)
 async def init_db() -> None:
     mongo_url = settings.MONGODB_URL
     logger.info(f"Connecting to MongoDB: {mongo_url[:40]}...")
-    client = AsyncIOMotorClient(
-        mongo_url,
-        tlsAllowInvalidCertificates=True,
-        serverSelectionTimeoutMS=10000,  # fail fast: 10s instead of 30s
-    )
     try:
+        client = AsyncIOMotorClient(
+            mongo_url,
+            tlsAllowInvalidCertificates=True,
+            serverSelectionTimeoutMS=10000,  # fail fast: 10s instead of 30s
+        )
         await init_beanie(
             database=client[settings.MONGODB_DB_NAME],
             document_models=[
@@ -42,6 +42,7 @@ async def init_db() -> None:
             ],
         )
         logger.info("Beanie initialized successfully.")
-    except Exception as exc:
-        logger.error(f"MongoDB init failed: {type(exc).__name__}: {exc}")
+    except BaseException as exc:
+        logger.error(f"MongoDB init failed [{type(exc).__name__}]: {exc}")
+        import sys; sys.stderr.flush()
         raise
