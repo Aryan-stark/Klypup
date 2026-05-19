@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, type Variants } from "framer-motion"
 import { ChevronDown, MapPin } from "lucide-react"
 import { useState } from "react"
 
@@ -21,7 +21,7 @@ interface ProjectCardsProps {
   projects: Project[]
 }
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20, scale: 0.95 },
   visible: {
     opacity: 1, y: 0, scale: 1,
@@ -33,7 +33,7 @@ const cardVariants = {
   },
 }
 
-const expandedContentVariants = {
+const expandedContentVariants: Variants = {
   hidden: {
     opacity: 0, height: 0,
     transition: { duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] },
@@ -47,7 +47,7 @@ const expandedContentVariants = {
   },
 }
 
-const childVariants = {
+const childVariants: Variants = {
   hidden: { opacity: 0, y: 10, scale: 0.95 },
   visible: {
     opacity: 1, y: 0, scale: 1,
@@ -55,7 +55,7 @@ const childVariants = {
   },
 }
 
-const pillVariants = {
+const pillVariants: Variants = {
   hidden: { opacity: 0, scale: 0.8, y: 10 },
   visible: {
     opacity: 1, scale: 1, y: 0,
@@ -68,7 +68,7 @@ const pillVariants = {
   tap: { scale: 0.98 },
 }
 
-const chevronVariants = {
+const chevronVariants: Variants = {
   hover: {
     scale: 1.1, backgroundColor: "#C1C7CD",
     transition: { type: "spring", stiffness: 400, damping: 25 },

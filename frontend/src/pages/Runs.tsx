@@ -37,7 +37,7 @@ export default function Runs() {
 
   const handleTrigger = async () => {
     try {
-      const result = await trigger.mutateAsync()
+      const result = await trigger.mutateAsync(undefined)
       const run = result.data as { id: string; total_products: number }
       setTotalProducts(run.total_products ?? 0)
       setActiveRunId(run.id)

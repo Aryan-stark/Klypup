@@ -8,7 +8,7 @@ import {
   CircleDotDashed,
   CircleX,
 } from "lucide-react";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup, type Variants } from "framer-motion";
 
 // Type definitions
 interface Subtask {
@@ -98,25 +98,25 @@ export default function Plan() {
     }));
   };
 
-  const taskVariants = {
+  const taskVariants: Variants = {
     hidden: { opacity: 0, y: prefersReducedMotion ? 0 : -5 },
     visible: { opacity: 1, y: 0, transition: { type: prefersReducedMotion ? "tween" : "spring" as const, stiffness: 500, damping: 30 } },
     exit: { opacity: 0, y: prefersReducedMotion ? 0 : -5, transition: { duration: 0.15 } },
   };
 
-  const subtaskListVariants = {
+  const subtaskListVariants: Variants = {
     hidden: { opacity: 0, height: 0, overflow: "hidden" },
     visible: { height: "auto", opacity: 1, overflow: "visible", transition: { duration: 0.25, staggerChildren: prefersReducedMotion ? 0 : 0.05, when: "beforeChildren", ease: [0.2, 0.65, 0.3, 0.9] as const } },
     exit: { height: 0, opacity: 0, overflow: "hidden", transition: { duration: 0.2, ease: [0.2, 0.65, 0.3, 0.9] as const } },
   };
 
-  const subtaskVariants = {
+  const subtaskVariants: Variants = {
     hidden: { opacity: 0, x: prefersReducedMotion ? 0 : -10 },
     visible: { opacity: 1, x: 0, transition: { type: prefersReducedMotion ? "tween" : "spring" as const, stiffness: 500, damping: 25 } },
     exit: { opacity: 0, x: prefersReducedMotion ? 0 : -10, transition: { duration: 0.15 } },
   };
 
-  const subtaskDetailsVariants = {
+  const subtaskDetailsVariants: Variants = {
     hidden: { opacity: 0, height: 0, overflow: "hidden" },
     visible: { opacity: 1, height: "auto", overflow: "visible", transition: { duration: 0.25, ease: [0.2, 0.65, 0.3, 0.9] as const } },
   };
