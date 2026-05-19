@@ -12,22 +12,36 @@ from app.models.pricing_run import PricingRun
 from app.models.pricing_recommendation import PricingRecommendation
 from app.models.audit_log import AuditLog
 from app.models.invitation import Invitation
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 async def init_db() -> None:
-    client = AsyncIOMotorClient(settings.MONGODB_URL, tlsAllowInvalidCertificates=True)
-    await init_beanie(
-        database=client[settings.MONGODB_DB_NAME],
-        document_models=[
-            Organization,
-            User,
-            OrgConfig,
-            Product,
-            CompetitorPrice,
-            DemandSignal,
-            PricingRun,
-            PricingRecommendation,
-            AuditLog,
-            Invitation,
-        ],
+    mongo_url = settings.MONGODB_URL
+    logger.info(f"Connecting to MongoDB: {mongo_url[:40]}...")
+    client = AsyncIOMotorClient(
+        mongo_url,
+        tlsAllowInvalidCertificates=True,
+        serverSelectionTimeoutMS=10000,  # fail fast: 10s instead of 30s
     )
+    try:
+        await init_beanie(
+            database=client[settings.MONGODB_DB_NAME],
+            document_models=[
+                Organization,
+                User,
+                OrgConfig,
+                Product,
+                CompetitorPrice,
+                DemandSignal,
+                PricingRun,
+                PricingRecommendation,
+                AuditLog,
+                Invitation,
+            ],
+        )
+        logger.info("Beanie initialized successfully.")
+    except Exception as exc:
+        logger.error(f"MongoDB init failed: {type(exc).__name__}: {exc}")
+        raise
