@@ -2,13 +2,8 @@ import { useState } from 'react'
 import { UserPlus, ShieldCheck, User } from 'lucide-react'
 import { useUsers, useInviteUser, useUpdateUser } from '@/hooks/useUsers'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import { isValidEmail } from '@/lib/utils'
 import type { OrgUser } from '@/types/user'
-
-function roleBadge(role: string) {
-  return role === 'admin'
-    ? 'bg-purple-100 text-purple-800'
-    : 'bg-blue-100 text-blue-800'
-}
 
 export default function Users() {
   const { data, isLoading } = useUsers()
@@ -19,8 +14,16 @@ export default function Users() {
   const [form, setForm] = useState({
     full_name: '', email: '', password: '', role: 'pricing_analyst' as const,
   })
+  const [emailError, setEmailError] = useState('')
   const [inviteError, setInviteError] = useState('')
   const [inviteSuccess, setInviteSuccess] = useState('')
+
+  const validateEmail = (value: string) => {
+    if (!value) { setEmailError('Email is required'); return false }
+    if (!isValidEmail(value)) { setEmailError('Enter a valid email address'); return false }
+    setEmailError('')
+    return true
+  }
 
   const users: OrgUser[] = (data?.data ?? []) as OrgUser[]
 
@@ -28,10 +31,12 @@ export default function Users() {
     e.preventDefault()
     setInviteError('')
     setInviteSuccess('')
+    if (!validateEmail(form.email)) return
     try {
       const res = await invite.mutateAsync(form)
       setInviteSuccess(`User ${res.data.email} created. Temporary password: ${form.password}`)
       setForm({ full_name: '', email: '', password: '', role: 'pricing_analyst' })
+      setEmailError('')
       setShowInvite(false)
     } catch {
       setInviteError('Failed to create user. Email may already exist.')
@@ -70,7 +75,7 @@ export default function Users() {
 
       {/* Invite form */}
       {showInvite && (
-        <div className="rounded-lg border bg-card p-5 space-y-4">
+        <div className="glass-card rounded-lg p-5 space-y-4">
           <h2 className="text-sm font-semibold">New user</h2>
           <form onSubmit={handleInvite} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -85,12 +90,21 @@ export default function Users() {
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Email</label>
               <input
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 required
-                className="w-full rounded-md border px-3 py-2 text-sm bg-background"
+                className={`w-full rounded-md border px-3 py-2 text-sm bg-background ${emailError ? 'border-destructive' : ''}`}
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value })
+                  if (emailError) validateEmail(e.target.value)
+                }}
+                onBlur={(e) => validateEmail(e.target.value)}
               />
+              {emailError && (
+                <p className="text-xs text-destructive mt-0.5">{emailError}</p>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Temporary password</label>
@@ -141,7 +155,7 @@ export default function Users() {
       {isLoading ? (
         <LoadingSpinner />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="glass-card rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
