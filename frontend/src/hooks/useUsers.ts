@@ -27,7 +27,9 @@ export function useUpdateUser() {
 }
 
 export function useCreateInvite() {
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateInviteRequest) => userService.createInvite(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 }

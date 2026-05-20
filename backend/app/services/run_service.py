@@ -224,6 +224,10 @@ async def stream_progress(org_id: PydanticObjectId, run_id: str):
             yield f"data: {json.dumps(event)}\n\n"
             if event.get("event") in ("completed", "failed"):
                 _run_queues.pop(run_id, None)
+                # Brief pause so the browser receives and processes the terminal
+                # event before the TCP connection closes — eliminates the race
+                # where onerror fires before onmessage when both arrive together.
+                await asyncio.sleep(0.3)
                 break
         except asyncio.TimeoutError:
             yield ": keepalive\n\n"

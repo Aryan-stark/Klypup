@@ -14,7 +14,7 @@ import { motion, AnimatePresence, LayoutGroup } from "framer-motion"
 import {
   CheckCircle2, Circle, CircleDotDashed, CircleX,
   ChevronDown, X, ExternalLink, Search, TrendingUp,
-  Package, DollarSign, ShieldCheck, Maximize2, Bot,
+  Package, DollarSign, ShieldCheck, Maximize2,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -177,8 +177,8 @@ export default function RunAgentPlan({ runId, totalProducts, isOpen, onClose, on
 
   const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null)
   const sourceRef      = useRef<EventSource | null>(null)
-  // Track whether the run already finished — read inside onerror to avoid stale closure
-  const completedRef   = useRef(false)
+  const completedRef   = useRef(false)   // true once a terminal event is processed
+  const closedRef      = useRef(false)   // true once we intentionally closed the stream
 
   // Advance through agents on a timer (~12s each)
   const startAgentTimer = useCallback((fromAgent: number) => {
@@ -231,6 +231,7 @@ export default function RunAgentPlan({ runId, totalProducts, isOpen, onClose, on
         if (data.event === "completed") {
           if (timerRef.current) clearInterval(timerRef.current)
           completedRef.current = true
+          closedRef.current = true
           setAgentStatuses(AGENTS.map(() => "completed"))
           setProductsProcessed(data.products_processed)
           setRunStatus("completed")
@@ -240,27 +241,34 @@ export default function RunAgentPlan({ runId, totalProducts, isOpen, onClose, on
         if (data.event === "failed") {
           if (timerRef.current) clearInterval(timerRef.current)
           completedRef.current = true
+          closedRef.current = true
           setAgentStatuses((prev) => prev.map((s) => s === "in-progress" ? "failed" : s))
           setRunStatus("failed")
-          setErrorMsg(data.error ?? "Unknown error")
+          setErrorMsg(data.error ?? "Pricing run failed")
           es.close()
         }
       } catch { /* malformed event */ }
     }
 
-    // onerror fires when the SSE connection closes — including the normal close after
-    // the backend sends "completed". Guard with completedRef (a ref, not state) to avoid
-    // the stale-closure bug where runStatus always reads "running" inside this handler.
+    // onerror fires when the SSE connection closes — including the normal server-side
+    // close right after "completed"/"failed". We close immediately to stop reconnection
+    // attempts, but defer the state update by 200ms to give any buffered onmessage events
+    // (which arrive in the same TCP burst as the connection close) time to run first.
     es.onerror = () => {
-      if (!completedRef.current) {
-        setRunStatus("failed")
-        setErrorMsg("Connection lost")
-      }
+      if (closedRef.current) { es.close(); return }
+      closedRef.current = true
       es.close()
+      setTimeout(() => {
+        if (!completedRef.current) {
+          setRunStatus("failed")
+          setErrorMsg("Connection lost — please retry")
+        }
+      }, 200)
     }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
+      closedRef.current = true
       es.close()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
