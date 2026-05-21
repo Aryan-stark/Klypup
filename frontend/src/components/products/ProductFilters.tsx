@@ -12,7 +12,16 @@ const SORT_OPTIONS = [
   { value: 'stock',  label: 'Stock' },
 ]
 
-const CATEGORIES = ['electronics', 'apparel', 'home_goods', 'sports', 'other']
+const CATEGORIES = [
+  'Electronics',
+  'Home & Garden',
+  'Clothing',
+  'Sports',
+  'Beauty & Health',
+  'Toys',
+  'Books & Media',
+  'Automotive',
+]
 
 export default function ProductFilters({ filters, onChange }: Props) {
   return (
@@ -32,7 +41,7 @@ export default function ProductFilters({ filters, onChange }: Props) {
       >
         <option value="">All categories</option>
         {CATEGORIES.map((c) => (
-          <option key={c} value={c}>{c.replace('_', ' ')}</option>
+          <option key={c} value={c}>{c}</option>
         ))}
       </select>
 
