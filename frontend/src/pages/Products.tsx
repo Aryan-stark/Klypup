@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useProducts } from '@/hooks/useProducts'
+import { useDebounce } from '@/hooks/useDebounce'
 import ProductFilters from '@/components/products/ProductFilters'
 import ProductTable from '@/components/products/ProductTable'
 import ProductTableSkeleton from '@/components/common/ProductTableSkeleton'
@@ -14,7 +15,9 @@ export default function Products() {
     per_page: 50,
   })
 
-  const { data, isLoading, isError, refetch } = useProducts(filters)
+  const debouncedSearch = useDebounce(filters.search, 300)
+  const queryFilters = { ...filters, search: debouncedSearch }
+  const { data, isLoading, isError, refetch } = useProducts(queryFilters)
 
   const products = data?.data ?? []
   const meta = data?.meta

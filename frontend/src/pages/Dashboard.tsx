@@ -1,10 +1,13 @@
 import { Clock, CheckCircle2, TrendingUp, BarChart3 } from 'lucide-react'
 import { useDashboardKpis, useDashboardActivity } from '@/hooks/useDashboard'
+import { useRecommendations } from '@/hooks/useRecommendations'
 import KpiCard from '@/components/dashboard/KpiCard'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import ConfidenceChart from '@/components/dashboard/ConfidenceChart'
+import PricingTrendChart from '@/components/dashboard/PricingTrendChart'
 import DashboardSkeleton from '@/components/common/DashboardSkeleton'
 import { formatPercent } from '@/lib/utils'
+import type { Recommendation } from '@/types/recommendation'
 
 interface KpiData {
   pending_approvals: number
@@ -18,6 +21,7 @@ interface KpiData {
 export default function Dashboard() {
   const kpis = useDashboardKpis()
   const activity = useDashboardActivity()
+  const allRecs = useRecommendations({ per_page: 100 })
 
   const kpiData = kpis.data?.data as KpiData | undefined
 
@@ -71,6 +75,15 @@ export default function Dashboard() {
           ) : null}
         </div>
       </div>
+
+      {/* Pricing trend line chart */}
+      {(allRecs.data?.data as Recommendation[] | undefined)?.length ? (
+        <div className="glass-card rounded-lg p-5">
+          <p className="text-sm font-semibold mb-1">Pricing Trend</p>
+          <p className="text-xs text-muted-foreground mb-4">Confidence score and price change % per recommendation — hover for product name</p>
+          <PricingTrendChart recommendations={allRecs.data!.data as Recommendation[]} />
+        </div>
+      ) : null}
     </div>
   )
 }

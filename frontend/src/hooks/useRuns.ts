@@ -5,6 +5,10 @@ export function useRuns() {
   return useQuery({
     queryKey: ['runs'],
     queryFn: () => runService.list(),
+    refetchInterval: (query) => {
+      const runs = (query.state.data as { data?: Array<{ status: string }> } | undefined)?.data ?? []
+      return runs.some((r) => r.status === 'running') ? 3000 : false
+    },
   })
 }
 

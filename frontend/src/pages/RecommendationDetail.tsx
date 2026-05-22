@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
 import { useRecommendation } from '@/hooks/useRecommendations'
+import { useProduct } from '@/hooks/useProducts'
 import AgentReasoningPanel from '@/components/recommendations/AgentReasoningPanel'
 import ApprovalActions from '@/components/recommendations/ApprovalActions'
 import ConfidenceGauge from '@/components/recommendations/ConfidenceGauge'
@@ -23,11 +24,19 @@ export default function RecommendationDetail() {
   const navigate = useNavigate()
   const { data, isLoading, isError } = useRecommendation(id!)
 
-  if (isLoading) return <LoadingSpinner />
-  if (isError || !data?.data) return <ErrorState />
+  const rec = data?.data as RecommendationDetail | undefined
+  const { data: productData } = useProduct(rec?.product_id ?? '')
 
-  const rec = data.data as RecommendationDetail
+  if (isLoading) return <LoadingSpinner />
+  if (isError || !rec) return <ErrorState />
+
   const isUp = rec.price_change_pct > 0
+  const product = productData?.data as { cost_basis?: number } | undefined
+  const costBasis = product?.cost_basis
+
+  const currentMargin   = costBasis != null ? ((rec.current_price - costBasis) / rec.current_price) * 100 : null
+  const projectedMargin = costBasis != null ? ((rec.recommended_price - costBasis) / rec.recommended_price) * 100 : null
+  const marginDelta = currentMargin != null && projectedMargin != null ? projectedMargin - currentMargin : null
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -49,13 +58,13 @@ export default function RecommendationDetail() {
         </span>
       </div>
 
-      {/* Price change + confidence */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Price change + confidence + margin impact */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="glass-card rounded-lg p-5">
           <p className="text-xs text-muted-foreground mb-3">Price Recommendation</p>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="text-2xl text-muted-foreground">{formatCurrency(rec.current_price)}</span>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
             <span className="text-3xl font-bold">{formatCurrency(rec.recommended_price)}</span>
             <span className={`text-sm font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
               {isUp ? '+' : ''}{formatPercent(rec.price_change_pct)}
@@ -68,6 +77,28 @@ export default function RecommendationDetail() {
           <span className="mt-3 inline-block rounded bg-muted px-2 py-1 text-xs font-medium">
             {rec.strategy_label.replace(/_/g, ' ')}
           </span>
+        </div>
+
+        {/* Margin impact — shown once product cost_basis loads */}
+        <div className="glass-card rounded-lg p-5">
+          <p className="text-xs text-muted-foreground mb-3">Margin Impact</p>
+          {marginDelta != null ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">{formatPercent(currentMargin!)}</span>
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-semibold">{formatPercent(projectedMargin!)}</span>
+              </div>
+              <div className={`flex items-center gap-1 text-sm font-medium ${marginDelta >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {marginDelta >= 0
+                  ? <TrendingUp className="h-4 w-4" />
+                  : <TrendingDown className="h-4 w-4" />}
+                {marginDelta >= 0 ? '+' : ''}{formatPercent(marginDelta)} margin
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Loading…</p>
+          )}
         </div>
       </div>
 

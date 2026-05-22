@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useProduct, useProductHistory } from '@/hooks/useProducts'
+import PriceHistoryChart from '@/components/products/PriceHistoryChart'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import ErrorState from '@/components/common/ErrorState'
 import { formatCurrency, formatPercent, formatDateTime } from '@/lib/utils'
@@ -71,26 +72,31 @@ export default function ProductDetail() {
         {history.isLoading ? (
           <LoadingSpinner />
         ) : history.data?.data && (history.data.data as unknown[]).length > 0 ? (
-          <div className="glass-card rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-right">Old Price</th>
-                  <th className="px-4 py-3 text-right">New Price</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {(history.data.data as Array<{ id: string; occurred_at: string; old_value: { price?: number } | null; new_value: { price?: number } | null }>).map((entry) => (
-                  <tr key={entry.id}>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDateTime(entry.occurred_at)}</td>
-                    <td className="px-4 py-3 text-right">{entry.old_value?.price != null ? formatCurrency(entry.old_value.price) : '—'}</td>
-                    <td className="px-4 py-3 text-right font-medium">{entry.new_value?.price != null ? formatCurrency(entry.new_value.price) : '—'}</td>
+          <>
+            <PriceHistoryChart
+              history={history.data.data as Array<{ occurred_at: string; new_value: { price?: number } | null; old_value: { price?: number } | null }>}
+            />
+            <div className="glass-card rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-right">Old Price</th>
+                    <th className="px-4 py-3 text-right">New Price</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y">
+                  {(history.data.data as Array<{ id: string; occurred_at: string; old_value: { price?: number } | null; new_value: { price?: number } | null }>).map((entry) => (
+                    <tr key={entry.id}>
+                      <td className="px-4 py-3 text-muted-foreground">{formatDateTime(entry.occurred_at)}</td>
+                      <td className="px-4 py-3 text-right">{entry.old_value?.price != null ? formatCurrency(entry.old_value.price) : '—'}</td>
+                      <td className="px-4 py-3 text-right font-medium">{entry.new_value?.price != null ? formatCurrency(entry.new_value.price) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">No price changes recorded yet.</p>
         )}
