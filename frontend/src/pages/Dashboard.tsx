@@ -3,7 +3,7 @@ import { useDashboardKpis, useDashboardActivity } from '@/hooks/useDashboard'
 import KpiCard from '@/components/dashboard/KpiCard'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import ConfidenceChart from '@/components/dashboard/ConfidenceChart'
-import LoadingSpinner from '@/components/common/LoadingSpinner'
+import DashboardSkeleton from '@/components/common/DashboardSkeleton'
 import { formatPercent } from '@/lib/utils'
 
 interface KpiData {
@@ -26,7 +26,7 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {kpis.isLoading ? (
-        <LoadingSpinner />
+        <DashboardSkeleton />
       ) : kpiData ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
@@ -60,19 +60,13 @@ export default function Dashboard() {
         {/* Confidence distribution — data comes from KPI endpoint, no extra fetch */}
         <div className="glass-card rounded-lg p-5">
           <p className="text-sm font-semibold mb-4">Confidence Distribution</p>
-          {kpis.isLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <ConfidenceChart distribution={kpiData?.confidence_distribution ?? []} />
-          )}
+          <ConfidenceChart distribution={kpiData?.confidence_distribution ?? []} />
         </div>
 
         {/* Recent activity */}
         <div className="glass-card rounded-lg p-5">
           <p className="text-sm font-semibold mb-4">Recent Activity</p>
-          {activity.isLoading ? (
-            <LoadingSpinner />
-          ) : activity.data?.data ? (
+          {activity.data?.data ? (
             <ActivityFeed items={activity.data.data as never} />
           ) : null}
         </div>

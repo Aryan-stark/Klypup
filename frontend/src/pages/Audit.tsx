@@ -3,7 +3,7 @@ import { Download } from 'lucide-react'
 import { useAudit } from '@/hooks/useAudit'
 import { useAuthStore } from '@/store/authStore'
 import AuditTable from '@/components/audit/AuditTable'
-import LoadingSpinner from '@/components/common/LoadingSpinner'
+import AuditSkeleton from '@/components/common/AuditSkeleton'
 import type { AuditLog } from '@/types/audit'
 
 const ACTION_OPTIONS = [
@@ -77,7 +77,7 @@ export default function Audit() {
         </select>
       </div>
 
-      {isLoading && <LoadingSpinner />}
+      {isLoading && <AuditSkeleton />}
 
       {!isLoading && (
         <>

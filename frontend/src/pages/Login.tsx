@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useLogin, useSignup } from '@/hooks/useAuth'
 import { isValidEmail } from '@/lib/utils'
@@ -78,6 +78,14 @@ export default function Login() {
 
   const login = useLogin()
   const signup = useSignup()
+  const [slowWarning, setSlowWarning] = useState(false)
+
+  useEffect(() => {
+    const isPending = login.isPending || signup.isPending
+    if (!isPending) { setSlowWarning(false); return }
+    const t = setTimeout(() => setSlowWarning(true), 4000)
+    return () => clearTimeout(t)
+  }, [login.isPending, signup.isPending])
 
   // ── Validation ─────────────────────────────────────────────────────────────
 
@@ -203,6 +211,12 @@ export default function Login() {
               >
                 {login.isPending ? 'Signing in…' : 'Sign in'}
               </button>
+
+              {slowWarning && (
+                <p className="text-xs text-muted-foreground text-center animate-pulse">
+                  Backend is waking up — first request takes ~30s on the free tier
+                </p>
+              )}
 
               <p className="text-center text-xs text-muted-foreground pt-1">
                 Don't have an account?{' '}

@@ -1,17 +1,17 @@
-/**
- * Topbar.tsx — Top navigation bar with user info, dark/light toggle, and logout.
- * Uses the curtain ThemeToggle (icon variant) — persists choice to localStorage.
- */
 import { useEffect } from 'react'
+import { Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { ThemeToggle } from '@/components/ui/curtain-theme-toggle'
 
-export default function Topbar() {
+interface Props {
+  onToggleSidebar?: () => void
+}
+
+export default function Topbar({ onToggleSidebar }: Props) {
   const user   = useAuthStore((s) => s.user)
   const logout = useLogout()
 
-  // Apply saved theme on mount (complements the index.html inline script)
   useEffect(() => {
     const saved = localStorage.getItem('klypup-theme')
     if (saved === 'dark') document.documentElement.classList.add('dark')
@@ -19,12 +19,21 @@ export default function Topbar() {
   }, [])
 
   return (
-    <header className="glass-topbar h-14 flex items-center justify-between px-6 sticky top-0 z-40">
-      {/* Left — breadcrumb / org name placeholder */}
-      <div className="text-sm font-medium text-muted-foreground tracking-wide select-none">
-        Klypup
-        <span className="mx-2 opacity-30">/</span>
-        <span className="text-foreground">{user?.org_id?.slice(-6)}</span>
+    <header className="glass-topbar h-14 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
+      {/* Left — hamburger (mobile only) + org name */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onToggleSidebar}
+          className="md:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+          aria-label="Open sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="text-sm font-medium text-muted-foreground tracking-wide select-none">
+          Klypup
+          <span className="mx-2 opacity-30">/</span>
+          <span className="text-foreground">{user?.org_id?.slice(-6)}</span>
+        </div>
       </div>
 
       {/* Right — user info + theme toggle + logout */}
@@ -37,7 +46,6 @@ export default function Topbar() {
           </span>
         </div>
 
-        {/* Curtain theme toggle — saves to localStorage for persistence */}
         <ThemeToggle
           variant="icon"
           buttonSize={30}

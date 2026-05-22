@@ -1,67 +1,50 @@
-/**
- * App.tsx — Root router. Defines every page route in the application.
- *
- * Route structure:
- *   /login                  → Login page (public)
- *   /                       → Protected: requires login
- *     /dashboard            → Dashboard home
- *     /products             → Product catalog
- *     /products/:id         → Product detail
- *     /recommendations      → Recommendation queue
- *     /recommendations/:id  → Recommendation detail (agent reasoning)
- *     /audit                → Audit trail
- *     /settings             → Admin config panel (admin role required)
- *   *                       → 404
- *
- * PrivateRoute: redirects to /login if no valid token in authStore
- * RoleGuard:    redirects to /dashboard if user lacks required role
- */
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import PrivateRoute from '@/components/layout/PrivateRoute'
 import RoleGuard from '@/components/layout/RoleGuard'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import LoadingSpinner from '@/components/common/LoadingSpinner'
 
-import Login from '@/pages/Login'
-import Join from '@/pages/Join'
-import Dashboard from '@/pages/Dashboard'
-import Products from '@/pages/Products'
-import ProductDetail from '@/pages/ProductDetail'
-import Recommendations from '@/pages/Recommendations'
-import RecommendationDetail from '@/pages/RecommendationDetail'
-import Audit from '@/pages/Audit'
-import Settings from '@/pages/Settings'
-import Users from '@/pages/Users'
-import Runs from '@/pages/Runs'
-import NotFound from '@/pages/NotFound'
+const Login              = lazy(() => import('@/pages/Login'))
+const Join               = lazy(() => import('@/pages/Join'))
+const Dashboard          = lazy(() => import('@/pages/Dashboard'))
+const Products           = lazy(() => import('@/pages/Products'))
+const ProductDetail      = lazy(() => import('@/pages/ProductDetail'))
+const Recommendations    = lazy(() => import('@/pages/Recommendations'))
+const RecommendationDetail = lazy(() => import('@/pages/RecommendationDetail'))
+const Audit              = lazy(() => import('@/pages/Audit'))
+const Settings           = lazy(() => import('@/pages/Settings'))
+const Users              = lazy(() => import('@/pages/Users'))
+const Runs               = lazy(() => import('@/pages/Runs'))
+const NotFound           = lazy(() => import('@/pages/NotFound'))
 
 export default function App() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/join" element={<Join />} />
+      <Route path="/login" element={<Suspense fallback={null}><Login /></Suspense>} />
+      <Route path="/join"  element={<Suspense fallback={<LoadingSpinner />}><Join /></Suspense>} />
 
-      {/* Protected — all inside DashboardLayout (sidebar + topbar) */}
+      {/* Protected — DashboardLayout owns Suspense for inner pages */}
       <Route element={<PrivateRoute />}>
         <Route element={<DashboardLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/products/:id" element={<ProductDetail />} />
-          <Route path="/recommendations" element={<Recommendations />} />
+          <Route path="/dashboard"        element={<Dashboard />} />
+          <Route path="/products"         element={<Products />} />
+          <Route path="/products/:id"     element={<ProductDetail />} />
+          <Route path="/recommendations"  element={<Recommendations />} />
           <Route path="/recommendations/:id" element={<RecommendationDetail />} />
-          <Route path="/audit" element={<Audit />} />
-          <Route path="/runs" element={<Runs />} />
+          <Route path="/audit"            element={<Audit />} />
+          <Route path="/runs"             element={<Runs />} />
 
-          {/* Admin only */}
           <Route element={<RoleGuard allowedRoles={['admin']} />}>
             <Route path="/settings" element={<Settings />} />
-            <Route path="/users" element={<Users />} />
+            <Route path="/users"    element={<Users />} />
           </Route>
         </Route>
       </Route>
 
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<Suspense fallback={null}><NotFound /></Suspense>} />
     </Routes>
   )
 }

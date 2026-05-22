@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useProducts } from '@/hooks/useProducts'
 import ProductFilters from '@/components/products/ProductFilters'
 import ProductTable from '@/components/products/ProductTable'
-import LoadingSpinner from '@/components/common/LoadingSpinner'
+import ProductTableSkeleton from '@/components/common/ProductTableSkeleton'
 import ErrorState from '@/components/common/ErrorState'
 import type { ProductFilters as Filters } from '@/types/product'
 
@@ -25,7 +25,7 @@ export default function Products() {
 
       <ProductFilters filters={filters} onChange={setFilters} />
 
-      {isLoading && <LoadingSpinner />}
+      {isLoading && <ProductTableSkeleton />}
       {isError && <ErrorState retry={() => refetch()} />}
 
       {!isLoading && !isError && (

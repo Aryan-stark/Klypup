@@ -8,6 +8,7 @@ import { runService } from '@/services/runService'
 import { MorphingCardStack, type CardData, type LayoutMode } from '@/components/ui/morphing-card-stack'
 import RunAgentPlan from '@/components/runs/RunAgentPlan'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import RecommendationSkeleton from '@/components/common/RecommendationSkeleton'
 import EmptyState from '@/components/common/EmptyState'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 import type { ApiResponse } from '@/types/api'
@@ -172,7 +173,7 @@ export default function Recommendations() {
           ))}
         </div>
 
-        {isLoading && <LoadingSpinner />}
+        {isLoading && <RecommendationSkeleton />}
 
         {!isLoading && items.length === 0 && (
           <EmptyState message={tab === 'pending' ? 'No pending recommendations. Run pricing to generate new ones.' : 'No recommendations yet.'} />

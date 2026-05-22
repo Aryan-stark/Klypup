@@ -23,11 +23,15 @@ const adminItems = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
-export default function Sidebar() {
+interface Props {
+  onClose?: () => void
+}
+
+export default function Sidebar({ onClose }: Props) {
   const user = useAuthStore((s) => s.user)
 
   return (
-    <aside className="glass-sidebar w-56 flex flex-col py-5 px-3 shrink-0">
+    <aside className="glass-sidebar w-56 h-full flex flex-col py-5 px-3 shrink-0">
       {/* Logo */}
       <div className="mb-7 px-3 flex items-center gap-2.5">
         <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
@@ -48,6 +52,7 @@ export default function Sidebar() {
           <NavLink
             key={to}
             to={to}
+            onClick={onClose}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
@@ -71,6 +76,7 @@ export default function Sidebar() {
               <NavLink
                 key={to}
                 to={to}
+                onClick={onClose}
                 className={({ isActive }: { isActive: boolean }) =>
                   cn(
                     'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',

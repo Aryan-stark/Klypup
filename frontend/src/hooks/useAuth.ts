@@ -18,14 +18,12 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginRequest) => authService.login(data),
     onSuccess: async (res) => {
-      // Clear any cached data from a previous session BEFORE setting new auth.
-      // Without this, React Query serves stale org-scoped data to the new user.
       qc.clear()
       const { access_token, refresh_token } = res.data
       useAuthStore.getState().setAccessToken(access_token)
-      const me = await authService.me()
+      navigate('/dashboard')              // navigate immediately — don't wait for /me
+      const me = await authService.me()  // runs while dashboard is already loading
       setAuth(me.data, access_token, refresh_token)
-      navigate('/dashboard')
     },
   })
 }
@@ -41,9 +39,9 @@ export function useSignup() {
       qc.clear()
       const { access_token, refresh_token } = res.data
       useAuthStore.getState().setAccessToken(access_token)
+      navigate('/dashboard')
       const me = await authService.me()
       setAuth(me.data, access_token, refresh_token)
-      navigate('/dashboard')
     },
   })
 }
