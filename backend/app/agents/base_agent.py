@@ -222,5 +222,20 @@ class BaseAgent(ABC):
         return None
 
     def _build_user_message(self, product_id: str, context: dict) -> str:
-        """Formats the user message with product_id and upstream agent context."""
-        return json.dumps({"product_id": product_id, "upstream_context": context})
+        """
+        Formats the user message passed to the model.
+
+        Strips _tool_calls and _execution_ms from each upstream agent's output
+        before serialising — those internal keys are only needed by the orchestrator
+        for MongoDB storage and are not useful to downstream agents.  Omitting them
+        keeps the user message compact and well within the 8k-token context window
+        of small models (Cerebras llama-3.1-8b, Groq llama-3.1-8b-instant).
+        """
+        slim_context: dict = {}
+        for key, value in context.items():
+            if isinstance(value, dict):
+                slim_context[key] = {k: v for k, v in value.items()
+                                     if not k.startswith("_")}
+            else:
+                slim_context[key] = value
+        return json.dumps({"product_id": product_id, "upstream_context": slim_context})
